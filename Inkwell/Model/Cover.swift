@@ -52,6 +52,8 @@ struct CoverDesign: Codable, Hashable {
     var ribbon = true
     /// Hand-drawn layer (PKDrawing data in the 300 × 400 cover space), drawn over the artwork.
     var drawing: Data?
+    /// Icons, stickers, emoji, text and photos placed on the cover. Optional so older saved covers still load.
+    var items: [CoverItem]?
 
     var primaryColor: Color { Color(hex: primary) }
     var secondaryColor: Color { Color(hex: secondary) }
@@ -135,6 +137,15 @@ struct CoverArtwork: View {
 
             // content
             content(primary: primary, secondary: secondary)
+
+            // placed icons, stickers, text and photos
+            if let items = design.items, !items.isEmpty {
+                ZStack {
+                    ForEach(items) { CoverItemView(item: $0) }
+                }
+                .frame(width: 300, height: 400)
+                .allowsHitTesting(false)
+            }
 
             // hand-drawn layer
             if let img = CoverDrawingCache.image(for: design.drawing) {

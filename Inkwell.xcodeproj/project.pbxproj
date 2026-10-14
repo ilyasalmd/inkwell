@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52297A9EE5B17A2434961517 /* WhiteboardView.swift */; };
 		140545C12911AB6A43894CE8 /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */; };
+		1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */; };
 		27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3D55E0940961AF9BC2BBFC /* EditorModel.swift */; };
 		27A8E257058CE109332F1096 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA29C0A3F753405E6DFFD2A6 /* LibraryStore.swift */; };
 		2BCB2CDBDA7480EE977189CA /* CoverDesigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086E657AF5037A457F83726C /* CoverDesigner.swift */; };
@@ -29,6 +30,7 @@
 		B2BA2EA95035E58FBA72AD30 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */; };
 		BD9FFF781C2026EEBBB960F7 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 031D1EC8641A92A5B1C064DF /* Models.swift */; };
 		BE55B81D3D2F34A77A2D669D /* InkwellApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BF2CBDC55A9BEB4BF6057D /* InkwellApp.swift */; };
+		C310946CAD698164800BD281 /* CoverItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */; };
 		C5673DE986508E99E0E268C6 /* LinkedFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091A1EF79277D7BEC3972207 /* LinkedFoldersView.swift */; };
 		C9D335E13AF36DF5FE6AA39B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */; };
 		D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4EF23ED67A533F7DC85AD8 /* Sheets.swift */; };
@@ -52,9 +54,11 @@
 		5D6894C5C06E2B64CC0F7B8C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		640C25A16ACEE95EE5476A05 /* LibraryStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryStorage.swift; sourceTree = "<group>"; };
 		6A8F726FD7CFAF809EB189D8 /* CoverSketchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverSketchView.swift; sourceTree = "<group>"; };
+		6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverItems.swift; sourceTree = "<group>"; };
 		6D427D7F7137A13FF8698F5E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8BF0F87DFA05723D41225178 /* InkwellOpen.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = InkwellOpen.entitlements; sourceTree = "<group>"; };
 		8C402D55B865C0DECA46263A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArrangeView.swift; sourceTree = "<group>"; };
 		9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		BC2888BD8FB11B1955B7236E /* NotebookExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookExporter.swift; sourceTree = "<group>"; };
@@ -84,6 +88,7 @@
 			children = (
 				9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */,
 				2F089D5590706CB7EFDABA50 /* Cover.swift */,
+				6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */,
 				640C25A16ACEE95EE5476A05 /* LibraryStorage.swift */,
 				CA29C0A3F753405E6DFFD2A6 /* LibraryStore.swift */,
 				031D1EC8641A92A5B1C064DF /* Models.swift */,
@@ -144,6 +149,7 @@
 		D849AE727C5BB83733F4D385 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */,
 				086E657AF5037A457F83726C /* CoverDesigner.swift */,
 				6A8F726FD7CFAF809EB189D8 /* CoverSketchView.swift */,
 				4C528270279E5BDE6EDAC0AE /* FolderBrowser.swift */,
@@ -229,7 +235,9 @@
 				B2BA2EA95035E58FBA72AD30 /* AppSettings.swift in Sources */,
 				8A51F48C19E33C3B6DA78E45 /* CalendarService.swift in Sources */,
 				A9B7FFE3E8C41B82D2F70CE0 /* Cover.swift in Sources */,
+				1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */,
 				2BCB2CDBDA7480EE977189CA /* CoverDesigner.swift in Sources */,
+				C310946CAD698164800BD281 /* CoverItems.swift in Sources */,
 				8EFDC0E8D8F1A6735D45D5C1 /* CoverSketchView.swift in Sources */,
 				27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */,
 				75CAB252387A441B0C34BE8C /* FolderBrowser.swift in Sources */,

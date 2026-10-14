@@ -8,6 +8,7 @@ struct CoverDesignerView: View {
 
     @Environment(\.inkTheme) private var theme
     @State private var sketching = false
+    @State private var arranging = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -75,6 +76,15 @@ struct CoverDesignerView: View {
             }
 
             if !forFolder {
+                section("Stickers, icons & photos") {
+                    Button { arranging = true } label: {
+                        Label((design.items ?? []).isEmpty ? "Decorate the cover" : "Arrange \((design.items ?? []).count) items",
+                              systemImage: "sparkles")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Text("Add stickers, icons, emoji, text and your own photos. Drag, pinch and rotate them into place.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 section("Draw your own") {
                     HStack(spacing: 12) {
                         Button { sketching = true } label: {
@@ -109,6 +119,9 @@ struct CoverDesignerView: View {
         .fullScreenCover(isPresented: $sketching) {
             CoverSketchView(design: $design, title: title)
         }
+        .fullScreenCover(isPresented: $arranging) {
+            CoverArrangeView(design: $design, title: title)
+        }
     }
 
     private var preview: some View {
@@ -133,6 +146,7 @@ struct CoverDesignerView: View {
                             next.symbol = CoverDesign.symbols.randomElement()
                         }
                         next.drawing = design.drawing
+                        next.items = design.items
                         design = next
                     }
                 } label: {
@@ -156,6 +170,7 @@ struct CoverDesignerView: View {
         d.label = .printed
         d.ribbon = false
         d.drawing = nil
+        d.items = nil
         return d
     }
 
