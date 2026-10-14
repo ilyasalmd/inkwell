@@ -1,6 +1,6 @@
 {
   "name": "inkwell",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Let Claude see the notebook pages you are writing in Inkwell on your iPad, without screenshots. Runs locally and reads the pages Inkwell keeps in your own iCloud Drive. No API key.",
   "author": { "name": "Inkwell" }
 }
