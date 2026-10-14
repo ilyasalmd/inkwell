@@ -65,12 +65,10 @@ struct InkCanvas: UIViewRepresentable {
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             model.activeCanvas = canvasView
-            model.pencilBegan()
             PalmGuard.shared.pencilBegan()
         }
 
         func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
-            model.pencilEnded()
             PalmGuard.shared.pencilEnded()
         }
     }
@@ -160,13 +158,12 @@ struct NotebookEditorView: View {
         .onAppear {
             tabs.add(notebookID)
             updatePalmGuard()
-            PalmGuard.shared.listen(model) { [weak model] blocked in model?.touchBlocked = blocked }
         }
         .onChange(of: settings.palmRejection) { _, _ in updatePalmGuard() }
-        .onChange(of: settings.drawWithFinger) { _, _ in updatePalmGuard() }
+        .onChange(of: settings.palmSensitivity) { _, _ in updatePalmGuard() }
+        .onChange(of: settings.leftHanded) { _, _ in updatePalmGuard() }
         .onDisappear {
             PalmGuard.shared.isActive = false
-            model.touchBlocked = false
             store.touch(notebookID)
             if let sideID { store.touch(sideID) }
         }
@@ -234,7 +231,8 @@ struct NotebookEditorView: View {
 
     private func updatePalmGuard() {
         let guardian = PalmGuard.shared
-        guardian.pencilOnly = settings.drawingPolicy == .pencilOnly
+        guardian.sensitivity = settings.palmSensitivity
+        guardian.leftHanded = settings.leftHanded
         guardian.onPencil = { [settings] in settings.pencilDetected() }
         guardian.isActive = settings.palmRejection
     }
@@ -336,8 +334,14 @@ struct NotebookPane: View {
     @Environment(AppSettings.self) private var settings
     @Environment(EditorModel.self) private var model
     @State private var zoom: CGFloat = 1
-    @State private var pinchBase: CGFloat?
+    /// Live pinch: the view is scaled on the GPU while the fingers move, and the pages re-laid out once at the end.
+    @State private var pinch: CGFloat = 1
+    @State private var pinchAnchor: UnitPoint = .center
     @State private var bridge = PageScrollBridge()
+    /// The page the scroll view is showing; only a different `currentPageID` (from the page strip) scrolls it.
+    @State private var shownPageID: UUID?
+    /// Page tracking waits until the last-open page has been scrolled to, so it can't overwrite it with page 1.
+    @State private var restored = false
 
     var body: some View {
         if let notebook = store.node(notebookID) {
@@ -348,11 +352,6 @@ struct NotebookPane: View {
                     GeometryReader { geo in pagesScroll(notebook, width: geo.size.width) }
                 }
             }
-            .onAppear {
-                if currentPageID == nil, let id = LastPage.get(notebookID), notebook.pages.contains(where: { $0.id == id }) {
-                    currentPageID = id
-                }
-            }
             .onChange(of: currentPageID) { _, id in
                 if let id { LastPage.set(id, in: notebookID) }
             }
@@ -361,55 +360,93 @@ struct NotebookPane: View {
         }
     }
 
-    /// True while a palm is resting or the Pencil is in use, so fingers shouldn't scroll, zoom or press things.
-    private var touchBlocked: Bool { settings.palmRejection && (model.pencilDown || model.touchBlocked) }
-
     private func pagesScroll(_ notebook: Node, width: CGFloat) -> some View {
         let available = max(width - 48, 200)
         let baseWidth = min(available, PageMetrics.width * 1.15)
         let pageWidth = baseWidth * zoom
         let atTop = settings.dockAtTop
         let topPadding: CGFloat = atTop ? (settings.dockCollapsed ? 80 : 150) : 20
-        return ScrollView(zoom > 1.01 ? [.vertical, .horizontal] : .vertical) {
-            LazyVStack(spacing: 28 * zoom) {
-                ForEach(notebook.pages) { page in
-                    pageView(page, in: notebook, width: pageWidth)
+        let spacing = 28 * zoom
+        return ScrollViewReader { proxy in
+            ScrollView(zoom > 1.01 ? [.vertical, .horizontal] : .vertical) {
+                LazyVStack(spacing: spacing) {
+                    ForEach(notebook.pages) { page in
+                        pageView(page, in: notebook, width: pageWidth)
+                    }
+                    addPageButton
+                    .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
                 }
-                addPageButton
-                    .allowsHitTesting(!touchBlocked)
-                .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
+                .scrollTargetLayout()
+                .frame(minWidth: width)
+                .padding(.top, topPadding)
+                .background(ScrollViewProbe { sv in bridge.attach(sv) })
             }
-            .scrollTargetLayout()
-            .frame(minWidth: width)
-            .padding(.top, topPadding)
-            .background(ScrollViewProbe { sv in bridge.attach(sv) })
-        }
-        .scrollDisabled(touchBlocked)
-        .scrollPosition(id: $currentPageID)
-        .simultaneousGesture(
-            MagnifyGesture()
-                .onChanged { value in
-                    guard !touchBlocked else { return }
-                    let base = pinchBase ?? zoom
-                    pinchBase = base
-                    setZoom(min(max(base * value.magnification, 1), 4), base: baseWidth,
-                            anchor: value.startLocation, top: topPadding)
+            // Which page you're on comes from the scroll offset rather than .scrollPosition, which would snap the view to
+            // the top of that page after every zoom.
+            .onScrollGeometryChange(for: Int.self) { geo in
+                let probe = geo.visibleRect.minY + geo.visibleRect.height * 0.3
+                var y = topPadding
+                for (i, page) in notebook.pages.enumerated() {
+                    y += pageWidth * page.heightRatio + spacing
+                    if probe < y { return i }
                 }
-                .onEnded { _ in pinchBase = nil }
-        )
-        .overlay(alignment: .topTrailing) {
-            if zoom > 1.01 {
-                Button {
-                    setZoom(1, base: baseWidth, anchor: bridge.visibleCentre, top: topPadding)
-                } label: {
-                    Label("\(Int((zoom * 100).rounded()))%", systemImage: "arrow.down.right.and.arrow.up.left")
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(.regularMaterial, in: Capsule())
+                return max(notebook.pages.count - 1, 0)
+            } action: { _, index in
+                guard restored, notebook.pages.indices.contains(index) else { return }
+                let id = notebook.pages[index].id
+                shownPageID = id
+                if currentPageID != id { currentPageID = id }
+            }
+            .onChange(of: currentPageID) { _, id in
+                guard let id, id != shownPageID else { return }
+                shownPageID = id
+                proxy.scrollTo(id, anchor: .top)
+            }
+            .onAppear {
+                let last = LastPage.get(notebookID).flatMap { id in notebook.pages.contains { $0.id == id } ? id : nil }
+                guard let target = currentPageID ?? last, target != notebook.pages.first?.id else {
+                    restored = true
+                    return
                 }
-                .buttonStyle(.plain)
-                .padding(12)
-                .transition(.opacity)
+                shownPageID = target
+                currentPageID = target
+                DispatchQueue.main.async {
+                    proxy.scrollTo(target, anchor: .top)
+                    DispatchQueue.main.async { restored = true }
+                }
+            }
+            .scaleEffect(pinch, anchor: pinchAnchor)
+            .clipped()
+            .simultaneousGesture(
+                MagnifyGesture()
+                    .onChanged { value in
+                        if pinch == 1 { pinchAnchor = value.startAnchor }
+                        pinch = min(max(zoom * value.magnification, 1), 4) / zoom
+                    }
+                    .onEnded { value in
+                        let target = min(max(zoom * value.magnification, 1), 4)
+                        var t = Transaction()
+                        t.disablesAnimations = true
+                        withTransaction(t) {
+                            pinch = 1
+                            setZoom(target, base: baseWidth, anchor: value.startLocation, top: topPadding)
+                        }
+                    }
+            )
+            .overlay(alignment: .topTrailing) {
+                if zoom > 1.01 {
+                    Button {
+                        setZoom(1, base: baseWidth, anchor: bridge.visibleCentre, top: topPadding)
+                    } label: {
+                        Label("\(Int((zoom * 100).rounded()))%", systemImage: "arrow.down.right.and.arrow.up.left")
+                            .font(.footnote.weight(.semibold))
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(.regularMaterial, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(12)
+                    .transition(.opacity)
+                }
             }
         }
     }
@@ -418,9 +455,10 @@ struct NotebookPane: View {
     private func setZoom(_ new: CGFloat, base: CGFloat, anchor: CGPoint, top: CGFloat) {
         let old = zoom
         guard abs(new - old) > 0.001 else { return }
+        let before = bridge.offset
         zoom = new
         DispatchQueue.main.async {
-            bridge.keepAnchored(oldPage: base * old, newPage: base * new, anchor: anchor, top: top)
+            bridge.keepAnchored(from: before, oldPage: base * old, newPage: base * new, anchor: anchor, top: top)
         }
     }
 

@@ -101,17 +101,26 @@ struct SettingsView: View {
                     }
                     Toggle("Draw with finger", isOn: $settings.drawWithFinger)
                     Toggle("Palm rejection", isOn: $settings.palmRejection)
+                    if settings.palmRejection {
+                        Picker("Sensitivity", selection: $settings.palmSensitivity) {
+                            ForEach(PalmSensitivity.allCases) { Text($0.title).tag($0) }
+                        }
+                    }
+                    LabeledContent("Writing hand") {
+                        Picker("Writing hand", selection: $settings.leftHanded) {
+                            Text("Right").tag(false)
+                            Text("Left").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(width: 180)
+                    }
                     Toggle("Scribble to erase", isOn: $editor.scribbleErase)
                     Toggle("Shape snapping", isOn: $editor.shapeSnap)
-                    Picker("Writing hand", selection: $settings.leftHanded) {
-                        Text("Right").tag(false)
-                        Text("Left").tag(true)
-                    }
-                    .pickerStyle(.segmented)
                 } header: {
                     Text("Apple Pencil")
                 } footer: {
-                    Text("Palm rejection ignores your resting hand and arm everywhere in a notebook (the page, pen tray and buttons) while you write, and any finger touch while the Pencil is on or just above the glass. Turn off Draw with finger and only the Pencil leaves ink. Scribble to erase: zig-zag over ink with the pen to remove it. Shape snapping: draw a line or shape and hold the Pencil still at the end to straighten it. Left-handed mirrors the pen tray and page strip. Squeeze needs Apple Pencil Pro.")
+                    Text("Palm rejection ignores your resting hand on the page; the toolbar and buttons always respond. Low ignores only a whole hand or arm. Medium (recommended) also ignores fingers on your writing-hand side of the Pencil while you write, so your other hand can still scroll and zoom. High ignores every finger on the page while the Pencil is in use. Set Writing hand so the guarded side matches yours; it also mirrors the pen tray and page strip. Turn off Draw with finger and only the Pencil leaves ink. Scribble to erase: zig-zag over ink with the pen to remove it. Shape snapping: draw a line or shape and hold the Pencil still at the end to straighten it. Squeeze needs Apple Pencil Pro.")
                 }
             }
             .onChange(of: shareWithClaude) { _, on in if on { ClaudeBridge.shared.syncAll() } }

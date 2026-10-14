@@ -102,6 +102,8 @@ final class AppSettings {
     var drawWithFinger: Bool { didSet { defaults.set(drawWithFinger, forKey: "drawWithFinger") } }
     /// While writing with the Pencil, ignore resting palms and stray fingers.
     var palmRejection: Bool { didSet { defaults.set(palmRejection, forKey: "palmRejection") } }
+    /// How eagerly finger contacts near the Pencil count as your hand.
+    var palmSensitivity: PalmSensitivity { didSet { defaults.set(palmSensitivity.rawValue, forKey: "palmSensitivity") } }
     /// Left-handed layout: pen tray and page strip mirror so your hand doesn't cover them.
     var leftHanded: Bool { didSet { defaults.set(leftHanded, forKey: "leftHanded") } }
 
@@ -129,6 +131,7 @@ final class AppSettings {
         dockAtTop = d.bool(forKey: "dockAtTop")
         drawWithFinger = d.object(forKey: "drawWithFinger") as? Bool ?? fingerDefault
         palmRejection = d.object(forKey: "palmRejection") as? Bool ?? true
+        palmSensitivity = PalmSensitivity(rawValue: d.string(forKey: "palmSensitivity") ?? "") ?? .medium
         leftHanded = d.bool(forKey: "leftHanded")
     }
 

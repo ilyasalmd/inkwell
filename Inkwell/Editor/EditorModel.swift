@@ -137,25 +137,6 @@ final class EditorModel {
     var shapeSnap: Bool = UserDefaults.standard.object(forKey: "inkwell.shapeSnap") as? Bool ?? true {
         didSet { UserDefaults.standard.set(shapeSnap, forKey: "inkwell.shapeSnap") }
     }
-    /// True while the Pencil is on the page and for a moment after, so a resting palm can't scroll, zoom or tap things.
-    var pencilDown = false
-    /// Set by the palm guard while a resting hand or a nearby Pencil means finger input should be ignored.
-    var touchBlocked = false
-    @ObservationIgnored private var pencilSettle: Task<Void, Never>?
-
-    func pencilBegan() {
-        pencilSettle?.cancel()
-        pencilDown = true
-    }
-
-    func pencilEnded() {
-        pencilSettle?.cancel()
-        pencilSettle = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(1500))
-            if !Task.isCancelled { self?.pencilDown = false }
-        }
-    }
-
     var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode, eraserSize: eraserSize) }
 
     func saveCurrentStyle() {
