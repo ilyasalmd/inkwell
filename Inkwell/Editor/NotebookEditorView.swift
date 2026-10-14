@@ -22,6 +22,8 @@ struct InkCanvas: UIViewRepresentable {
         context.coordinator.scribble = ScribbleWatcher(drawing: v.drawing)
         v.delegate = context.coordinator
         apply(to: v)
+        // PencilKit builds its selection gestures lazily; catch them once they exist.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [policy] in v.keepMenusForPencil(policy == .pencilOnly) }
         return v
     }
 
@@ -33,6 +35,7 @@ struct InkCanvas: UIViewRepresentable {
         v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
         v.drawingPolicy = policy
         v.tool = spec.makeTool()
+        v.keepMenusForPencil(policy == .pencilOnly)
     }
 
     final class Coordinator: NSObject, PKCanvasViewDelegate {
@@ -97,6 +100,7 @@ struct NotebookEditorView: View {
     @State private var showSettings = false
     @State private var zoom: CGFloat = 1
     @State private var pinchBase: CGFloat?
+    @State private var bridge = PageScrollBridge()
     @State private var exporting = false
     @State private var exportFile: ExportFile?
     @State private var exportFailed = false
@@ -182,38 +186,49 @@ struct NotebookEditorView: View {
         }
     }
 
+    /// True while a palm is resting or the Pencil is in use, so fingers shouldn't scroll, zoom or press things.
+    private var touchBlocked: Bool { settings.palmRejection && (model.pencilDown || model.touchBlocked) }
+
     private func pagesScroll(_ notebook: Node, width: CGFloat) -> some View {
         let available = max(width - 48, 200)
-        let pageWidth = min(available, PageMetrics.width * 1.15) * zoom
+        let baseWidth = min(available, PageMetrics.width * 1.15)
+        let pageWidth = baseWidth * zoom
         let atTop = settings.dockAtTop
+        let topPadding: CGFloat = atTop ? (settings.dockCollapsed ? 80 : 150) : 20
         return ScrollView(zoom > 1.01 ? [.vertical, .horizontal] : .vertical) {
-            LazyVStack(spacing: 28) {
+            LazyVStack(spacing: 28 * zoom) {
                 ForEach(notebook.pages) { page in
                     pageView(page, in: notebook, width: pageWidth)
                 }
                 addPageButton
-                    .allowsHitTesting(!(model.pencilDown && settings.palmRejection))
+                    .allowsHitTesting(!touchBlocked)
                 .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
             }
             .scrollTargetLayout()
             .frame(minWidth: width)
-            .padding(.top, atTop ? (settings.dockCollapsed ? 80 : 150) : 20)
+            .padding(.top, topPadding)
+            .background(ScrollViewProbe { sv in
+                bridge.attach(sv, model: model, active: settings.palmRejection) { settings.pencilDetected() }
+            })
         }
-        .scrollDisabled(model.pencilDown && settings.palmRejection)
+        .scrollDisabled(touchBlocked)
         .scrollPosition(id: $currentPageID)
         .simultaneousGesture(
             MagnifyGesture()
                 .onChanged { value in
-                    guard !(model.pencilDown && settings.palmRejection) else { return }
+                    guard !touchBlocked else { return }
                     let base = pinchBase ?? zoom
                     pinchBase = base
-                    zoom = min(max(base * value.magnification, 1), 4)
+                    setZoom(min(max(base * value.magnification, 1), 4), base: baseWidth,
+                            anchor: value.startLocation, top: topPadding)
                 }
                 .onEnded { _ in pinchBase = nil }
         )
         .overlay(alignment: .topTrailing) {
             if zoom > 1.01 {
-                Button { withAnimation(.snappy) { zoom = 1 } } label: {
+                Button {
+                    setZoom(1, base: baseWidth, anchor: bridge.visibleCentre, top: topPadding)
+                } label: {
                     Label("\(Int((zoom * 100).rounded()))%", systemImage: "arrow.down.right.and.arrow.up.left")
                         .font(.footnote.weight(.semibold))
                         .padding(.horizontal, 12).padding(.vertical, 7)
@@ -223,6 +238,16 @@ struct NotebookEditorView: View {
                 .padding(12)
                 .transition(.opacity)
             }
+        }
+    }
+
+    /// Changes the zoom and scrolls so the spot between your fingers stays put.
+    private func setZoom(_ new: CGFloat, base: CGFloat, anchor: CGPoint, top: CGFloat) {
+        let old = zoom
+        guard abs(new - old) > 0.001 else { return }
+        zoom = new
+        DispatchQueue.main.async {
+            bridge.keepAnchored(oldPage: base * old, newPage: base * new, anchor: anchor, top: top)
         }
     }
 
@@ -341,15 +366,6 @@ struct NotebookEditorView: View {
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
         .id(page.id)
-        .contextMenu {
-            Button("Insert page after", systemImage: "plus.square.on.square") {
-                store.addPage(to: notebookID, after: page.id)
-            }
-            Button("Delete page", systemImage: "trash", role: .destructive) {
-                store.deletePage(page.id, in: notebookID)
-            }
-            .disabled(notebook.pages.count < 2)
-        }
     }
 }
 

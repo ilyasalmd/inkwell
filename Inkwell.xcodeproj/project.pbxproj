@@ -36,6 +36,7 @@
 		C5673DE986508E99E0E268C6 /* LinkedFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091A1EF79277D7BEC3972207 /* LinkedFoldersView.swift */; };
 		C9D335E13AF36DF5FE6AA39B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */; };
 		D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4EF23ED67A533F7DC85AD8 /* Sheets.swift */; };
+		DFF5717813AE2AB4BB7D8782 /* PalmGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */; };
 		E9522376AFE69F4FD871F651 /* PageTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC53F8073945E96608C960C /* PageTemplates.swift */; };
 		F7D88505695EE574D8C8EBCB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECF27EABD512571A720D1C0 /* SettingsView.swift */; };
 /* End PBXBuildFile section */
@@ -65,6 +66,7 @@
 		9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScribbleEraser.swift; sourceTree = "<group>"; };
 		AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
+		AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmGuard.swift; sourceTree = "<group>"; };
 		BC2888BD8FB11B1955B7236E /* NotebookExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookExporter.swift; sourceTree = "<group>"; };
 		BECF27EABD512571A720D1C0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BFF35DC20345334E3C67BCD3 /* Inkwell.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Inkwell.entitlements; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 				08D5E2E41BB2EC05602F1468 /* NotebookTabs.swift */,
 				10E6E50E2B5C85CD2CADBC9D /* PageStrip.swift */,
 				FBC53F8073945E96608C960C /* PageTemplates.swift */,
+				AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */,
 				E6904DBEAEB4CBBFD21D6412 /* PenDock.swift */,
 				A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */,
 				52297A9EE5B17A2434961517 /* WhiteboardView.swift */,
@@ -261,6 +264,7 @@
 				A3FDC87642292C881475CC4C /* PDFImport.swift in Sources */,
 				44CCC00336A188E81430CD5E /* PageStrip.swift in Sources */,
 				E9522376AFE69F4FD871F651 /* PageTemplates.swift in Sources */,
+				DFF5717813AE2AB4BB7D8782 /* PalmGuard.swift in Sources */,
 				A87412D9A9DB5A794EF34DB2 /* PenDock.swift in Sources */,
 				443D455D1BF305C4DCC379CF /* RootView.swift in Sources */,
 				58D500CD904171846B1EB190 /* SchedulesView.swift in Sources */,

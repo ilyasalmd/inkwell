@@ -1,0 +1,25 @@
+{
+  "manifest_version": "0.2",
+  "name": "inkwell",
+  "display_name": "Inkwell",
+  "version": "0.1.1",
+  "description": "Lets Claude look at what you're writing in Inkwell on your iPad, without screenshots.",
+  "long_description": "Inkwell on your iPad saves page images to your own iCloud Drive (Settings > Share with Claude on my Mac). This extension reads them from your Mac so you can say 'look at what I just did in Inkwell' or 'check my Maths foundations folder'. Runs locally, no API key, no network.",
+  "author": { "name": "Ilyas Daneshmand" },
+  "server": {
+    "type": "python",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "/usr/bin/python3",
+      "args": ["${__dirname}/server.py"]
+    }
+  },
+  "tools": [
+    { "name": "inkwell_current_page", "description": "The page you were just writing on in Inkwell, as an image." },
+    { "name": "inkwell_read_folder", "description": "An Inkwell folder's notebooks and their written pages." },
+    { "name": "inkwell_list_notebooks", "description": "Your Inkwell notebooks with folders and page counts." },
+    { "name": "inkwell_read_page", "description": "One page of a notebook as an image." },
+    { "name": "inkwell_read_notebook", "description": "A notebook's written pages as images." }
+  ],
+  "compatibility": { "platforms": ["darwin"] }
+}

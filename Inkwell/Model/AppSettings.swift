@@ -131,4 +131,12 @@ final class AppSettings {
         palmRejection = d.object(forKey: "palmRejection") as? Bool ?? true
         leftHanded = d.bool(forKey: "leftHanded")
     }
+
+    /// The first time an Apple Pencil touches a page, stop fingers (and palms) from inking. Happens once; after that
+    /// the finger-drawing switch stays wherever you put it.
+    func pencilDetected() {
+        guard !defaults.bool(forKey: "pencilOnlyAutoSet") else { return }
+        defaults.set(true, forKey: "pencilOnlyAutoSet")
+        if drawWithFinger { drawWithFinger = false }
+    }
 }

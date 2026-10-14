@@ -135,6 +135,8 @@ final class EditorModel {
     }
     /// True while the Pencil is on the page and for a moment after, so a resting palm can't scroll, zoom or tap things.
     var pencilDown = false
+    /// Set by the palm guard while a resting hand or a nearby Pencil means finger input should be ignored.
+    var touchBlocked = false
     @ObservationIgnored private var pencilSettle: Task<Void, Never>?
 
     func pencilBegan() {

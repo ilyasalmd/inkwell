@@ -17,6 +17,8 @@ struct BoardCanvas: UIViewRepresentable {
     let policy: PKCanvasViewDrawingPolicy
     let store: LibraryStore
     let model: EditorModel
+    var palmRejection = true
+    var pencilDetected: () -> Void = {}
     @Binding var viewport: Viewport
 
     func makeCoordinator() -> Coordinator { Coordinator(pageID: pageID, store: store, model: model, viewport: $viewport) }
@@ -37,6 +39,11 @@ struct BoardCanvas: UIViewRepresentable {
         v.delegate = context.coordinator
         model.activeCanvas = v
         model.boardCanvas = v
+        let palm = context.coordinator.palm
+        palm.targets = [v.panGestureRecognizer] + (v.pinchGestureRecognizer.map { [$0] } ?? [])
+        palm.onBlockedChange = { [weak model] blocked in model?.touchBlocked = blocked }
+        v.addGestureRecognizer(palm)
+        palm.attachHover(to: v)
         apply(to: v)
         return v
     }
@@ -57,9 +64,14 @@ struct BoardCanvas: UIViewRepresentable {
     }
 
     private func apply(to v: PKCanvasView) {
+        if let c = v.delegate as? Coordinator {
+            c.palm.isActive = palmRejection
+            c.palm.onPencil = pencilDetected
+        }
         v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
         v.drawingPolicy = policy
         v.tool = spec.makeTool()
+        v.keepMenusForPencil(policy == .pencilOnly)
     }
 
     final class Coordinator: NSObject, PKCanvasViewDelegate {
@@ -69,6 +81,7 @@ struct BoardCanvas: UIViewRepresentable {
         var viewport: Binding<Viewport>
         var positioned = false
         var scribble: ScribbleWatcher?
+        let palm = PalmGuard()
 
         init(pageID: UUID, store: LibraryStore, model: EditorModel, viewport: Binding<Viewport>) {
             self.pageID = pageID
@@ -164,7 +177,9 @@ struct WhiteboardView: View {
         ZStack {
             BoardGrid(template: page.template, paper: page.paper, viewport: viewport)
             BoardCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
-                        policy: settings.drawingPolicy, store: store, model: model, viewport: $viewport)
+                        policy: settings.drawingPolicy, store: store, model: model,
+                        palmRejection: settings.palmRejection, pencilDetected: { settings.pencilDetected() },
+                        viewport: $viewport)
         }
         .clipped()
         .ignoresSafeArea(.container, edges: .bottom)
