@@ -2,117 +2,236 @@ import SwiftUI
 import UIKit
 import PencilKit
 
-/// Watches every touch that reaches a scroll view (without taking any of them) and decides when fingers should be
-/// ignored: while a palm is resting (a large contact), while the Pencil is touching or hovering near the glass, and
-/// for a moment after it lifts. While blocked, the scroll view's own pan and pinch are switched off, so a resting hand
-/// can't scroll or zoom the page.
+/// One per app, attached to the window, so it sees every touch: on the page, the pen tray, the toolbar and the page
+/// list. It decides when a touch is a hand rather than a finger, and swallows it:
+/// - a wide contact (a palm, the side of the hand, a forearm), or three or more fingers down at once;
+/// - any finger touch while the Pencil is writing, hovering just above the glass, or has just lifted (Pencil-only mode).
+/// Swallowed touches are cancelled before buttons act on them, and scroll views stop scrolling or zooming. If a palm
+/// landed first and nudged the page before the Pencil touched down, the page is put back where it was.
+/// The Pencil's own touches are never taken, so writing is never interrupted.
 final class PalmGuard: UIGestureRecognizer, UIGestureRecognizerDelegate {
-    /// Contacts wider than this (in points) are treated as a palm or the side of a hand. Fingertips are well under it.
-    static let palmRadius: CGFloat = 28
+    static let shared = PalmGuard()
 
-    var isActive = true { didSet { if !isActive { setBlocked(false) } } }
-    /// Recognisers to switch off while blocked (a scroll view's pan and pinch).
-    var targets: [UIGestureRecognizer] = []
-    var onBlockedChange: ((Bool) -> Void)?
+    /// Contacts wider than this (in points) are treated as a palm or the side of a hand. Fingertips are well under it.
+    static let palmRadius: CGFloat = 30
+    /// After the Pencil lifts, finger touches that start within this window are treated as the hand settling.
+    static let afterPencil: TimeInterval = 0.5
+    /// A palm that lands this soon before the Pencil (and is still down) has its scroll undone.
+    static let revertWindow: TimeInterval = 0.9
+
+    /// Editors switch the guard on while they're on screen (and palm rejection is on in Settings).
+    var isActive = false { didSet { if !isActive { clear() } } }
+    /// Only the Pencil draws, so any finger touch near Pencil use can safely be ignored.
+    var pencilOnly = true
     var onPencil: (() -> Void)?
 
-    private var ignored = Set<ObjectIdentifier>()
-    private var pencilTouching = 0
-    private var pencilNearUntil = Date.distantPast
+    private let scrollViews = NSHashTable<UIScrollView>.weakObjects()
+    private var listeners: [ObjectIdentifier: (Bool) -> Void] = [:]
+    private var fingers = Set<ObjectIdentifier>()
+    private var palms = Set<ObjectIdentifier>()
+    private var firstFingerAt = Date.distantPast
+    private var savedOffsets: [(UIScrollView, CGPoint)] = []
+    private var pencilTouching = false
+    private var pencilHotUntil = Date.distantPast
     private var settle: Timer?
     private(set) var blocked = false
+    private weak var hover: UIHoverGestureRecognizer?
 
-    init() {
+    private init() {
         super.init(target: nil, action: nil)
-        cancelsTouchesInView = false
+        cancelsTouchesInView = true      // once a touch is judged a hand, buttons under it never fire
         delaysTouchesBegan = false
         delaysTouchesEnded = false
         delegate = self
     }
 
-    /// Hover from Apple Pencil (iPad models that support it) counts as "about to write".
-    func attachHover(to view: UIView) {
+    // MARK: Wiring
+
+    /// Moves the guard (and its Pencil-hover watcher) onto `window` if it isn't there already.
+    func install(in window: UIWindow?) {
+        guard let window, view !== window else { return }
+        view?.removeGestureRecognizer(self)
+        window.addGestureRecognizer(self)
         #if !targetEnvironment(macCatalyst)
-        let hover = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
-        hover.delegate = self
-        view.addGestureRecognizer(hover)
+        if let hover { hover.view?.removeGestureRecognizer(hover) }
+        let h = UIHoverGestureRecognizer(target: self, action: #selector(hovered(_:)))
+        h.delegate = self
+        window.addGestureRecognizer(h)
+        hover = h
         #endif
     }
 
-    @objc private func hovered(_ g: UIHoverGestureRecognizer) {
-        guard isActive, g.zOffset > 0 else { return }   // zOffset is only above 0 for the Pencil, not a pointer
-        pencilNearUntil = Date().addingTimeInterval(0.8)
+    /// Scroll views whose pan and pinch are switched off while a hand is down or the Pencil is in use.
+    func register(_ sv: UIScrollView) {
+        scrollViews.add(sv)
+        install(in: sv.window)
+        if blocked { setScroll(sv, enabled: false) }
+    }
+
+    /// Called with true/false whenever finger input starts or stops being ignored.
+    func listen(_ owner: AnyObject, _ change: @escaping (Bool) -> Void) {
+        listeners[ObjectIdentifier(owner)] = change
+    }
+
+    func stopListening(_ owner: AnyObject) { listeners[ObjectIdentifier(owner)] = nil }
+
+    /// The canvases report when drawing starts and stops (the Pencil, or a finger when finger drawing is on).
+    func pencilBegan() {
+        guard isActive else { return }
+        pencilTouching = true
         refresh()
     }
 
+    func pencilEnded() {
+        pencilTouching = false
+        pencilHotUntil = Date().addingTimeInterval(Self.afterPencil)
+        refresh()
+    }
+
+    @objc private func hovered(_ g: UIHoverGestureRecognizer) {
+        // zOffset is only above 0 for the Pencil, not a trackpad pointer.
+        guard isActive, g.zOffset > 0 else { return }
+        pencilHotUntil = max(pencilHotUntil, Date().addingTimeInterval(0.6))
+        refresh()
+    }
+
+    // MARK: Touches
+
+    private var pencilHot: Bool { pencilTouching || Date() < pencilHotUntil }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-        guard isActive else { return }
+        guard isActive else {
+            touches.forEach { ignore($0, for: event) }
+            return
+        }
         for t in touches {
             if t.type == .pencil {
-                pencilTouching += 1
+                // Never take the Pencil's touch; just note that it's here.
+                pencilHotUntil = max(pencilHotUntil, Date().addingTimeInterval(Self.afterPencil))
                 onPencil?()
-            } else if t.majorRadius > Self.palmRadius || pencilActive {
-                ignored.insert(ObjectIdentifier(t))
+                ignore(t, for: event)
+                continue
             }
+            let id = ObjectIdentifier(t)
+            if fingers.isEmpty {
+                firstFingerAt = Date()
+                savedOffsets = scrollViews.allObjects.map { ($0, $0.contentOffset) }
+            }
+            fingers.insert(id)
+            if t.majorRadius > Self.palmRadius || (pencilOnly && pencilHot) { palms.insert(id) }
         }
-        refresh()
+        if fingers.count >= 3 { palms.formUnion(fingers) }
+        evaluate()
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         guard isActive else { return }
         // A palm often lands as a small contact and spreads out as the hand settles.
         for t in touches where t.type != .pencil && t.majorRadius > Self.palmRadius {
-            ignored.insert(ObjectIdentifier(t))
+            palms.insert(ObjectIdentifier(t))
+        }
+        evaluate()
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) { finish(touches) }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { finish(touches) }
+
+    private func finish(_ touches: Set<UITouch>) {
+        for t in touches {
+            fingers.remove(ObjectIdentifier(t))
+            palms.remove(ObjectIdentifier(t))
+        }
+        if fingers.isEmpty {
+            state = (state == .possible) ? .failed : .ended
+        } else if state == .began || state == .changed {
+            state = .changed
         }
         refresh()
     }
 
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) { finish(touches, event) }
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) { finish(touches, event) }
-
-    private func finish(_ touches: Set<UITouch>, _ event: UIEvent) {
-        for t in touches {
-            if t.type == .pencil {
-                pencilTouching = max(0, pencilTouching - 1)
-                pencilNearUntil = Date().addingTimeInterval(1.0)
-            }
-            ignored.remove(ObjectIdentifier(t))
+    private func evaluate() {
+        if !palms.isEmpty, state == .possible {
+            state = .began        // cancels these touches in views and stops buttons and scrolling acting on them
+        } else if state == .began || state == .changed {
+            state = .changed
         }
         refresh()
-        // Leave the gesture cycle cleanly once nothing is touching, so the next touch starts fresh.
-        if (event.allTouches ?? []).allSatisfy({ $0.phase == .ended || $0.phase == .cancelled }) {
-            state = .failed
-        }
     }
 
     override func reset() {
         super.reset()
-        ignored.removeAll()
-        pencilTouching = 0
+        fingers.removeAll()
+        palms.removeAll()
         refresh()
     }
 
-    private var pencilActive: Bool { pencilTouching > 0 || Date() < pencilNearUntil }
+    private func clear() {
+        fingers.removeAll()
+        palms.removeAll()
+        pencilTouching = false
+        pencilHotUntil = .distantPast
+        settle?.invalidate()
+        setBlocked(false)
+    }
+
+    // MARK: Blocking
 
     private func refresh() {
         guard isActive else { return }
-        setBlocked(!ignored.isEmpty || pencilActive)
+        setBlocked(!palms.isEmpty || pencilHot)
         // Re-check when the "Pencil was just here" window runs out.
         settle?.invalidate()
-        let wait = pencilNearUntil.timeIntervalSinceNow
+        let wait = pencilHotUntil.timeIntervalSinceNow
         if wait > 0 {
-            settle = Timer.scheduledTimer(withTimeInterval: wait + 0.05, repeats: false) { [weak self] _ in self?.refresh() }
+            settle = Timer.scheduledTimer(withTimeInterval: wait + 0.05, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refresh() }
+            }
         }
     }
 
     private func setBlocked(_ value: Bool) {
         guard value != blocked else { return }
         blocked = value
-        for g in targets { g.isEnabled = !value }
-        onBlockedChange?(value)
+        if value, !fingers.isEmpty, Date().timeIntervalSince(firstFingerAt) < Self.revertWindow {
+            // The hand landed first and dragged the page a little before we knew: put it back.
+            for (sv, offset) in savedOffsets where sv.window != nil {
+                sv.setContentOffset(offset, animated: false)
+            }
+        }
+        for sv in scrollViews.allObjects { setScroll(sv, enabled: !value) }
+        for l in listeners.values { l(value) }
     }
 
-    func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+    private func setScroll(_ sv: UIScrollView, enabled: Bool) {
+        sv.panGestureRecognizer.isEnabled = enabled
+        sv.pinchGestureRecognizer?.isEnabled = enabled
+    }
+
+    // MARK: Who can be stopped
+
+    /// Stops buttons, menus, scrolling and zooming. Never PencilKit's own drawing.
+    override func canPrevent(_ other: UIGestureRecognizer) -> Bool {
+        if other is UIHoverGestureRecognizer { return false }
+        if let sv = other.view as? UIScrollView, other === sv.panGestureRecognizer || other === sv.pinchGestureRecognizer {
+            return true
+        }
+        return !Self.isInsideCanvas(other.view)
+    }
+
+    override func canBePrevented(by other: UIGestureRecognizer) -> Bool { false }
+
+    func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        g !== self || !canPrevent(other)
+    }
+
+    private static func isInsideCanvas(_ view: UIView?) -> Bool {
+        var v = view
+        while let current = v {
+            if current is PKCanvasView { return true }
+            v = current.superview
+        }
+        return false
+    }
 }
 
 extension PKCanvasView {
@@ -140,17 +259,11 @@ extension PKCanvasView {
 @MainActor
 final class PageScrollBridge {
     weak var scrollView: UIScrollView?
-    let palm = PalmGuard()
 
-    func attach(_ sv: UIScrollView, model: EditorModel, active: Bool, onPencil: @escaping () -> Void) {
-        palm.isActive = active
-        palm.onPencil = onPencil
-        guard scrollView !== sv else { return }
+    func attach(_ sv: UIScrollView) {
+        guard scrollView !== sv || sv.window != nil else { return }
         scrollView = sv
-        palm.targets = [sv.panGestureRecognizer] + (sv.pinchGestureRecognizer.map { [$0] } ?? [])
-        palm.onBlockedChange = { [weak model] blocked in model?.touchBlocked = blocked }
-        sv.addGestureRecognizer(palm)
-        palm.attachHover(to: sv)
+        PalmGuard.shared.register(sv)
     }
 
     /// After the pages change from `oldPage` to `newPage` points wide, scrolls so the point that was under `anchor`

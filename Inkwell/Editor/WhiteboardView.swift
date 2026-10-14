@@ -17,8 +17,6 @@ struct BoardCanvas: UIViewRepresentable {
     let policy: PKCanvasViewDrawingPolicy
     let store: LibraryStore
     let model: EditorModel
-    var palmRejection = true
-    var pencilDetected: () -> Void = {}
     @Binding var viewport: Viewport
 
     func makeCoordinator() -> Coordinator { Coordinator(pageID: pageID, store: store, model: model, viewport: $viewport) }
@@ -36,20 +34,17 @@ struct BoardCanvas: UIViewRepresentable {
         v.bounces = false
         v.drawing = store.drawing(for: pageID)
         context.coordinator.scribble = ScribbleWatcher(drawing: v.drawing)
+        context.coordinator.snapper = ShapeSnapWatcher(drawing: v.drawing)
         v.delegate = context.coordinator
         model.activeCanvas = v
         model.boardCanvas = v
-        let palm = context.coordinator.palm
-        palm.targets = [v.panGestureRecognizer] + (v.pinchGestureRecognizer.map { [$0] } ?? [])
-        palm.onBlockedChange = { [weak model] blocked in model?.touchBlocked = blocked }
-        v.addGestureRecognizer(palm)
-        palm.attachHover(to: v)
         apply(to: v)
         return v
     }
 
     func updateUIView(_ v: PKCanvasView, context: Context) {
         context.coordinator.viewport = $viewport
+        if v.window != nil { PalmGuard.shared.register(v) }
         apply(to: v)
         if !context.coordinator.positioned, v.bounds.width > 0 {
             context.coordinator.positioned = true
@@ -64,10 +59,6 @@ struct BoardCanvas: UIViewRepresentable {
     }
 
     private func apply(to v: PKCanvasView) {
-        if let c = v.delegate as? Coordinator {
-            c.palm.isActive = palmRejection
-            c.palm.onPencil = pencilDetected
-        }
         v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
         v.drawingPolicy = policy
         v.tool = spec.makeTool()
@@ -81,7 +72,7 @@ struct BoardCanvas: UIViewRepresentable {
         var viewport: Binding<Viewport>
         var positioned = false
         var scribble: ScribbleWatcher?
-        let palm = PalmGuard()
+        var snapper: ShapeSnapWatcher?
 
         init(pageID: UUID, store: LibraryStore, model: EditorModel, viewport: Binding<Viewport>) {
             self.pageID = pageID
@@ -91,6 +82,10 @@ struct BoardCanvas: UIViewRepresentable {
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            if snapper?.didChange(canvasView, enabled: model.shapeSnap, haptic: { [model] in model.haptic?(nil) },
+                                  save: { [store, pageID] in store.saveDrawing($0, pageID: pageID) }) == true {
+                return   // the snapped shape triggers its own change
+            }
             store.saveDrawing(canvasView.drawing, pageID: pageID)
             let id = pageID, store = store
             scribble?.didChange(canvasView, enabled: model.scribbleErase, haptic: { [model] in model.haptic?(nil) },
@@ -99,6 +94,11 @@ struct BoardCanvas: UIViewRepresentable {
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             model.activeCanvas = canvasView
+            PalmGuard.shared.pencilBegan()
+        }
+
+        func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+            PalmGuard.shared.pencilEnded()
         }
 
         func scrollViewDidScroll(_ s: UIScrollView) { publish(s) }
@@ -178,7 +178,6 @@ struct WhiteboardView: View {
             BoardGrid(template: page.template, paper: page.paper, viewport: viewport)
             BoardCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
                         policy: settings.drawingPolicy, store: store, model: model,
-                        palmRejection: settings.palmRejection, pencilDetected: { settings.pencilDetected() },
                         viewport: $viewport)
         }
         .clipped()

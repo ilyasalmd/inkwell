@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0317DA8ED8BFE428F6D817C1 /* ShapeSnap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3185EE886630C810AC661A94 /* ShapeSnap.swift */; };
 		04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52297A9EE5B17A2434961517 /* WhiteboardView.swift */; };
 		140545C12911AB6A43894CE8 /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */; };
 		1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */; };
@@ -52,6 +53,7 @@
 		1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		26A5A86D94E2F0B6EBA77B76 /* Inkwell.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Inkwell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F089D5590706CB7EFDABA50 /* Cover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cover.swift; sourceTree = "<group>"; };
+		3185EE886630C810AC661A94 /* ShapeSnap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeSnap.swift; sourceTree = "<group>"; };
 		3AEC9BD05FB10405565298D5 /* LinkedFolders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedFolders.swift; sourceTree = "<group>"; };
 		4C528270279E5BDE6EDAC0AE /* FolderBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderBrowser.swift; sourceTree = "<group>"; };
 		52297A9EE5B17A2434961517 /* WhiteboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhiteboardView.swift; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 				AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */,
 				E6904DBEAEB4CBBFD21D6412 /* PenDock.swift */,
 				A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */,
+				3185EE886630C810AC661A94 /* ShapeSnap.swift */,
 				52297A9EE5B17A2434961517 /* WhiteboardView.swift */,
 			);
 			path = Editor;
@@ -270,6 +273,7 @@
 				58D500CD904171846B1EB190 /* SchedulesView.swift in Sources */,
 				C10101C58A1A95CA246F3B55 /* ScribbleEraser.swift in Sources */,
 				F7D88505695EE574D8C8EBCB /* SettingsView.swift in Sources */,
+				0317DA8ED8BFE428F6D817C1 /* ShapeSnap.swift in Sources */,
 				D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */,
 				04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */,
 			);
@@ -342,7 +346,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -407,7 +411,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -494,7 +498,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

@@ -133,6 +133,10 @@ final class EditorModel {
     var scribbleErase: Bool = UserDefaults.standard.object(forKey: "inkwell.scribbleErase") as? Bool ?? true {
         didSet { UserDefaults.standard.set(scribbleErase, forKey: "inkwell.scribbleErase") }
     }
+    /// Draw a line or shape and hold the Pencil still at the end to straighten it.
+    var shapeSnap: Bool = UserDefaults.standard.object(forKey: "inkwell.shapeSnap") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(shapeSnap, forKey: "inkwell.shapeSnap") }
+    }
     /// True while the Pencil is on the page and for a moment after, so a resting palm can't scroll, zoom or tap things.
     var pencilDown = false
     /// Set by the palm guard while a resting hand or a nearby Pencil means finger input should be ignored.

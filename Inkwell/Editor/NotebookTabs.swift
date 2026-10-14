@@ -64,6 +64,8 @@ struct TabStrip: View {
 
 /// Choose another notebook to open as a tab.
 struct OpenNotebookSheet: View {
+    /// Notebooks not to offer. Defaults to the ones already open as tabs.
+    var excluding: Set<UUID>?
     var pick: (UUID) -> Void
     @Environment(LibraryStore.self) private var store
     @Environment(NotebookTabs.self) private var tabs
@@ -72,7 +74,7 @@ struct OpenNotebookSheet: View {
 
     private var items: [Node] {
         store.nodes.values
-            .filter { !$0.isFolder && !tabs.open.contains($0.id) }
+            .filter { !$0.isFolder && !(excluding ?? Set(tabs.open)).contains($0.id) }
             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
             .sorted { $0.modifiedAt > $1.modifiedAt }
     }
