@@ -267,11 +267,6 @@ final class LibraryStore {
         save()
     }
 
-    func toggleFavorite(_ id: UUID) {
-        nodes[id]?.isFavorite.toggle()
-        save()
-    }
-
     func touch(_ id: UUID) {
         nodes[id]?.modifiedAt = Date()
         save()

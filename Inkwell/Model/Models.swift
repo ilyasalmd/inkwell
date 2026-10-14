@@ -115,7 +115,6 @@ struct Node: Identifiable, Codable, Hashable {
     var createdAt = Date()
     var modifiedAt = Date()
     var tint: NodeTint = .ink
-    var isFavorite = false
     var pages: [PageInfo] = []
     var sourceEventID: String?
     var cover: CoverDesign?

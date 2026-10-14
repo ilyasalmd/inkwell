@@ -12,7 +12,7 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
 targets:
   Inkwell:
     type: application
@@ -45,6 +45,7 @@ targets:
     info:
       path: Inkwell/Info.plist
       properties:
+        ITSAppUsesNonExemptEncryption: false
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.ilyas.inkwell.refresh]
         NSUbiquitousContainers:
@@ -54,3 +55,8 @@ targets:
             NSUbiquitousContainerSupportedFolderLevels: Any
         UISupportsDocumentBrowser: false
         LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: PDF Document
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [com.adobe.pdf]

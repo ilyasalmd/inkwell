@@ -59,11 +59,18 @@ struct ColorPalette: Identifiable {
 }
 
 enum EraserMode: String, CaseIterable, Identifiable {
-    case stroke, pixel
+    case pixel, stroke
     var id: String { rawValue }
     var title: String { self == .stroke ? "Stroke" : "Pixel" }
     var detail: String { self == .stroke ? "Removes the whole stroke you touch" : "Rubs out only what you touch" }
     var symbol: String { self == .stroke ? "scribble.variable" : "circle.dotted" }
+}
+
+enum EraserSize {
+    static let range: ClosedRange<CGFloat> = 8...64
+    /// Diameter in points for a 0...1 slider position (pixel eraser).
+    static func width(_ t: CGFloat) -> CGFloat { range.lowerBound + (range.upperBound - range.lowerBound) * t }
+    static let defaultFraction: CGFloat = 0.3
 }
 
 /// A named favourite: pen, colour and thickness in one tap.
@@ -79,12 +86,13 @@ struct ToolSpec: Equatable {
     var kind: ToolKind
     var color: UIColor
     var width: CGFloat          // 0...1 fraction of the ink's valid range
-    var eraser: EraserMode = .stroke
+    var eraser: EraserMode = .pixel
+    var eraserSize: CGFloat = 0.3   // 0...1, pixel eraser only
 
     func makeTool() -> PKTool {
         switch kind {
         case .eraser:
-            return PKEraserTool(eraser == .pixel ? .bitmap : .vector)
+            return eraser == .pixel ? PKEraserTool(.fixedWidthBitmap, width: EraserSize.width(eraserSize)) : PKEraserTool(.vector)
         case .lasso:
             return PKLassoTool()
         default:
@@ -111,14 +119,17 @@ final class EditorModel {
     @ObservationIgnored weak var activeCanvas: PKCanvasView?
     @ObservationIgnored weak var boardCanvas: PKCanvasView?
 
-    var eraserMode: EraserMode = EraserMode(rawValue: UserDefaults.standard.string(forKey: "inkwell.eraserMode") ?? "") ?? .stroke {
+    var eraserMode: EraserMode = EraserMode(rawValue: UserDefaults.standard.string(forKey: "inkwell.eraserMode") ?? "") ?? .pixel {
         didSet { UserDefaults.standard.set(eraserMode.rawValue, forKey: "inkwell.eraserMode") }
+    }
+    var eraserSize: CGFloat = UserDefaults.standard.object(forKey: "inkwell.eraserSize") as? CGFloat ?? EraserSize.defaultFraction {
+        didSet { UserDefaults.standard.set(eraserSize, forKey: "inkwell.eraserSize") }
     }
     var savedStyles: [PenStyle] = (UserDefaults.standard.data(forKey: "inkwell.penStyles")).flatMap { try? JSONDecoder().decode([PenStyle].self, from: $0) } ?? [] {
         didSet { UserDefaults.standard.set(try? JSONEncoder().encode(savedStyles), forKey: "inkwell.penStyles") }
     }
 
-    var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode) }
+    var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode, eraserSize: eraserSize) }
 
     func saveCurrentStyle() {
         guard kind.usesColor else { return }

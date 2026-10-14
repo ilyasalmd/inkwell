@@ -16,7 +16,7 @@ struct LinkedFoldersView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Label("Bring your Goodnotes notebooks over", systemImage: "square.and.arrow.down.on.square")
                         .font(.headline)
-                    Text("In Goodnotes, export a notebook as a PDF and import it here, or turn on Auto-backup (Settings, Backup, choose PDF) to a folder in iCloud Drive and link that folder. Inkwell keeps your handwriting on its own layer above each page, so you can keep writing, and refreshes the pages when Goodnotes exports a newer copy.")
+                    Text("Quickest: in Goodnotes, open a notebook, tap Share, choose PDF, then pick Inkwell. It lands as a notebook in No Folder. For everything at once, turn on Auto-backup in Goodnotes (PDF, to iCloud Drive) and link that folder here; Inkwell then keeps itself in step. Your handwriting stays on its own layer above each page, so you can keep writing.")
                         .font(.callout).foregroundStyle(.secondary)
                     HStack {
                         Button("Import PDFs…") { showPDFPicker = true }
@@ -40,7 +40,7 @@ struct LinkedFoldersView: View {
                                 if linked.syncing.contains(f.id) { ProgressView() }
                                 else { Button("Sync now") { Task { await linked.sync(f.id, into: store) } }.buttonStyle(.bordered) }
                             }
-                            Text("Into: \(store.node(f.destinationID)?.name ?? "All Notes")")
+                            Text("Into: \(store.node(f.destinationID)?.name ?? "No Folder")")
                                 .font(.footnote).foregroundStyle(.secondary)
                             if let r = f.lastResult {
                                 Text("\(r)\(f.lastSync.map { " · " + $0.formatted(.relative(presentation: .named)) } ?? "")")
@@ -73,7 +73,7 @@ struct LinkedFoldersView: View {
         .fileImporter(isPresented: $showPDFPicker, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
             guard case .success(let urls) = result else { return }
             let made = urls.filter { store.importPDF(from: $0, into: nil) != nil }.count
-            note = "Imported \(made) of \(urls.count) PDF\(urls.count == 1 ? "" : "s") into All Notes."
+            note = "Imported \(made) of \(urls.count) PDF\(urls.count == 1 ? "" : "s") into No Folder."
         }
         .sheet(item: $pickDestination) { f in
             FolderPickerSheet(title: "Import into…", initial: f.destinationID) { linked.setDestination(f.id, $0) }

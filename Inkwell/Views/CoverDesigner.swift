@@ -5,6 +5,7 @@ struct CoverDesignerView: View {
     @Binding var design: CoverDesign
     var title: String
     var forFolder = false
+    var showPreview = true
 
     @Environment(\.inkTheme) private var theme
     @State private var sketching = false
@@ -12,7 +13,7 @@ struct CoverDesignerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            preview
+            if showPreview { preview }
             section("Colour") {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 12)], spacing: 12) {
                     ForEach(Array(CoverDesign.presets.enumerated()), id: \.offset) { _, p in

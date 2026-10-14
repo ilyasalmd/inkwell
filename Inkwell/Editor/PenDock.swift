@@ -410,6 +410,24 @@ struct EraserPanel: View {
                 }
                 .buttonStyle(.plain)
             }
+            if model.eraserMode == .pixel {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Size").font(.subheadline.weight(.semibold))
+                        Spacer()
+                        ZStack {
+                            Circle().fill(Color.primary.opacity(0.06))
+                            Circle().stroke(Color.primary.opacity(0.55), lineWidth: 1.5)
+                                .frame(width: max(6, EraserSize.width(model.eraserSize) * 0.9),
+                                       height: max(6, EraserSize.width(model.eraserSize) * 0.9))
+                        }
+                        .frame(width: 56, height: 56)
+                        .animation(.snappy, value: model.eraserSize)
+                    }
+                    Slider(value: $model.eraserSize, in: 0...1)
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(20)
         .frame(width: 320)

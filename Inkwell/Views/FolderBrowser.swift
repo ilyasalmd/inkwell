@@ -2,8 +2,6 @@ import SwiftUI
 
 enum BrowserScope: Hashable {
     case folder(UUID?)
-    case favorites
-    case recents
 }
 
 // MARK: - Icons
@@ -52,25 +50,16 @@ struct FolderBrowser: View {
     }
 
     private var title: String {
-        switch scope {
-        case .folder(let id): return store.node(id)?.name ?? "All Notes"
-        case .favorites: return "Favorites"
-        case .recents: return "Recents"
-        }
+        folderID == nil ? "No Folder" : (store.node(folderID)?.name ?? "No Folder")
     }
 
     private var items: [Node] {
-        let base: [Node]
-        switch scope {
-        case .folder(let id): base = store.children(of: id)
-        case .favorites: base = store.nodes.values.filter(\.isFavorite)
-        case .recents:
-            return Array(store.nodes.values.filter { !$0.isFolder }.sorted { $0.modifiedAt > $1.modifiedAt }.prefix(40))
-        }
         let q = search.trimmingCharacters(in: .whitespaces)
-        if !q.isEmpty, case .folder = scope {
+        if !q.isEmpty {
             return LibraryStore.sorted(store.nodes.values.filter { $0.name.localizedCaseInsensitiveContains(q) }, by: sort)
         }
+        // The top level is "No Folder": only loose notebooks. Folders live in the sidebar.
+        let base = store.children(of: folderID).filter { folderID != nil || !$0.isFolder }
         return LibraryStore.sorted(base, by: sort)
     }
 
@@ -78,9 +67,12 @@ struct FolderBrowser: View {
         Group {
             if items.isEmpty {
                 ContentUnavailableView {
-                    Label(search.isEmpty ? "Nothing here yet" : "No results", systemImage: search.isEmpty ? "tray" : "magnifyingglass")
+                    Label(search.isEmpty ? (folderID == nil ? "No loose notebooks" : "This folder is empty") : "No results",
+                          systemImage: search.isEmpty ? "tray" : "magnifyingglass")
                 } description: {
-                    Text(search.isEmpty ? "Create a notebook or folder with the + button." : "Try a different name.")
+                    Text(search.isEmpty
+                         ? (folderID == nil ? "Notebooks that aren't in a folder show up here. Tap + to make one." : "Tap + to add a notebook.")
+                         : "Try a different name.")
                 }
             } else if viewMode == .icons {
                 iconGrid
@@ -93,7 +85,7 @@ struct FolderBrowser: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search notes")
         .toolbar { toolbar }
-        .safeAreaInset(edge: .bottom) { if case .folder = scope { PathBar(folderID: folderID, navigate: navigate) } }
+        .safeAreaInset(edge: .bottom) { if folderID != nil, store.path(to: folderID).count > 1 { PathBar(folderID: folderID, navigate: navigate) } }
         .sheet(isPresented: $showNewNotebook) {
             NewNotebookSheet(parent: folderID) { open($0) }
         }
@@ -132,11 +124,9 @@ struct FolderBrowser: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            if let id = folderID {
-                Button {
-                    navigate(store.node(id)?.parentID.map { .folder($0) } ?? .library)
-                } label: { Image(systemName: "chevron.up") }
-                .accessibilityLabel("Enclosing folder")
+            if let id = folderID, let parent = store.node(id)?.parentID {
+                Button { navigate(.folder(parent)) } label: { Image(systemName: "chevron.up") }
+                    .accessibilityLabel("Enclosing folder")
             }
             Picker("View", selection: $viewMode) {
                 Image(systemName: "square.grid.2x2").tag(ViewMode.icons)
@@ -149,19 +139,17 @@ struct FolderBrowser: View {
                     ForEach(SortOption.allCases) { Text($0.title).tag($0) }
                 }
             } label: { Image(systemName: "arrow.up.arrow.down") }
-            if case .folder = scope {
-                Menu {
-                    Button("New Notebook", systemImage: "book.closed") { showNewNotebook = true }
-                    Button("Import PDFs…", systemImage: "square.and.arrow.down") { showImporter = true }
-                    Divider()
-                    Button("New Folder", systemImage: "folder.badge.plus") {
-                        let f = store.createFolder(name: "Untitled Folder", in: folderID)
-                        selected = f.id
-                        renameText = f.name
-                        renameTarget = f
-                    }
-                } label: { Image(systemName: "plus") }
-            }
+            Menu {
+                Button("New Notebook", systemImage: "book.closed") { showNewNotebook = true }
+                Button("Import PDFs…", systemImage: "square.and.arrow.down") { showImporter = true }
+                Divider()
+                Button("New Folder", systemImage: "folder.badge.plus") {
+                    let f = store.createFolder(name: "New Folder", in: folderID)
+                    selected = f.id
+                    renameText = f.name
+                    renameTarget = f
+                }
+            } label: { Image(systemName: "plus") }
         }
     }
 
@@ -187,48 +175,14 @@ struct FolderBrowser: View {
         return parts.isEmpty ? Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)) : parts.joined(separator: " · ")
     }
 
-    private var continueItems: [Node] {
-        guard case .folder(nil) = scope, search.isEmpty else { return [] }
-        return Array(store.nodes.values.filter { !$0.isFolder }.sorted { $0.modifiedAt > $1.modifiedAt }.prefix(6))
-    }
-
     private var iconGrid: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 header
-                if !continueItems.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Continue writing").font(.headline).padding(.horizontal, 24)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 22) {
-                                ForEach(continueItems) { node in
-                                    Button { open(node.id) } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            CoverArtwork(design: node.coverDesign, title: node.name, width: 120)
-                                                .shadow(color: .black.opacity(0.3), radius: 8, y: 5)
-                                            Text(node.name).font(.footnote.weight(.semibold)).lineLimit(1).frame(width: 120, alignment: .leading)
-                                            Text(node.modifiedAt.formatted(.relative(presentation: .named)))
-                                                .font(.caption2).foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .hoverEffect(.lift)
-                                }
-                            }
-                            .padding(.horizontal, 24).padding(.vertical, 6)
-                        }
-                    }
-                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .top)], spacing: 20) {
                     ForEach(items) { node in
                         VStack(spacing: 8) {
                             NodeIcon(node: node, size: 104)
-                                .overlay(alignment: .topTrailing) {
-                                    if node.isFavorite {
-                                        Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow)
-                                            .padding(5).background(.thinMaterial, in: Circle())
-                                    }
-                                }
                             Text(node.name)
                                 .font(.callout.weight(.medium))
                                 .multilineTextAlignment(.center)
@@ -272,7 +226,6 @@ struct FolderBrowser: View {
                     HStack(spacing: 10) {
                         NodeIcon(node: node, size: 28).frame(width: 34, height: 38)
                         Text(node.name).lineLimit(1)
-                        if node.isFavorite { Image(systemName: "star.fill").font(.caption).foregroundStyle(.yellow) }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Text(node.modifiedAt.formatted(date: .abbreviated, time: .shortened))
@@ -364,8 +317,6 @@ struct NodeMenu: ViewModifier {
             Button("Rename", systemImage: "pencil") { rename(node) }
             Button("Duplicate", systemImage: "plus.square.on.square") { store.duplicate(node.id) }
             Button("Move to…", systemImage: "folder") { move(node) }
-            Button(node.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                   systemImage: node.isFavorite ? "star.slash" : "star") { store.toggleFavorite(node.id) }
             Button(node.isFolder ? "Customise…" : "Design cover…", systemImage: "paintbrush.pointed") { customise(node) }
             Divider()
             Button("Delete", systemImage: "trash", role: .destructive) { delete(node) }
@@ -383,9 +334,8 @@ struct PathBar: View {
     var body: some View {
         let crumbs = store.path(to: folderID)
         HStack(spacing: 6) {
-            crumb(title: "All Notes", symbol: "tray.full.fill", tint: .secondary, dest: nil)
-            ForEach(crumbs) { n in
-                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+            ForEach(Array(crumbs.enumerated()), id: \.element.id) { i, n in
+                if i > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary) }
                 crumb(title: n.name, symbol: "folder.fill", tint: n.tint.color, dest: n.id)
             }
             Spacer()

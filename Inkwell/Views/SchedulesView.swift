@@ -74,7 +74,7 @@ struct SchedulesView: View {
     private func summary(_ r: ScheduleRule) -> String {
         let cal = Calendar.current
         let days = r.weekdays.sorted().map { cal.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
-        let dest = store.node(r.destinationID)?.name ?? "All Notes"
+        let dest = store.node(r.destinationID)?.name ?? "No Folder"
         return "\(days.isEmpty ? "No days" : days) · \(r.output == .folder ? "folder" : "notebook") in \(dest) · \(r.template.title)"
     }
 }
@@ -132,7 +132,7 @@ struct ScheduleEditor: View {
                         HStack {
                             Text("Folder").foregroundStyle(.primary)
                             Spacer()
-                            Text(store.node(rule.destinationID)?.name ?? "All Notes").foregroundStyle(.secondary)
+                            Text(store.node(rule.destinationID)?.name ?? "No Folder").foregroundStyle(.secondary)
                         }
                     }
                 }
