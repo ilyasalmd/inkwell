@@ -37,6 +37,7 @@ struct RootView: View {
                         NotebookEditorView(notebookID: route.id, switchTo: switchTo, closeTab: closeTab)
                     }
             }
+            .toolbar(removing: path.isEmpty ? nil : .sidebarToggle)
         }
         .navigationSplitViewStyle(.balanced)
         .onChange(of: path) { _, new in

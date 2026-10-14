@@ -68,6 +68,17 @@ struct InkCanvas: UIViewRepresentable {
     }
 }
 
+/// Remembers which page each notebook was on, so it reopens where you left off.
+enum LastPage {
+    private static func key(_ notebook: UUID) -> String { "inkwell.lastPage.\(notebook.uuidString)" }
+    static func get(_ notebook: UUID) -> UUID? {
+        UserDefaults.standard.string(forKey: key(notebook)).flatMap(UUID.init(uuidString:))
+    }
+    static func set(_ page: UUID, in notebook: UUID) {
+        UserDefaults.standard.set(page.uuidString, forKey: key(notebook))
+    }
+}
+
 // MARK: - Editor
 
 struct NotebookEditorView: View {
@@ -80,12 +91,15 @@ struct NotebookEditorView: View {
     @Environment(EditorModel.self) private var model
     @Environment(NotebookTabs.self) private var tabs
     @Environment(\.inkTheme) private var theme
+    @Environment(\.dismiss) private var dismiss
     @State private var currentPageID: UUID?
     @State private var showPages = false
     @State private var showStyle = false
     @State private var showAddPage = false
     @State private var showCover = false
-    @State private var showOpenPicker = false
+    @State private var showSettings = false
+    @State private var zoom: CGFloat = 1
+    @State private var pinchBase: CGFloat?
     @State private var exporting = false
     @State private var exportFile: ExportFile?
     @State private var exportFailed = false
@@ -110,13 +124,14 @@ struct NotebookEditorView: View {
         .animation(.snappy, value: showPages)
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
+        .navigationBarBackButtonHidden(true)
         .toolbar { toolbar(notebook) }
         .sheet(isPresented: $showStyle) {
             PageStyleSheet(notebook: notebook, pageID: currentPageID ?? notebook.pages.first?.id)
                 .presentationSizing(.page)
         }
         .sheet(isPresented: $showCover) { CustomiseSheet(nodeID: notebookID) }
-        .sheet(isPresented: $showOpenPicker) { OpenNotebookSheet(pick: switchTo) }
+        .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(item: $exportFile) { file in
             ShareSheet(url: file.url).presentationDetents([.medium, .large])
         }
@@ -124,7 +139,15 @@ struct NotebookEditorView: View {
         .alert("Couldn't make the PDF", isPresented: $exportFailed) {
             Button("OK", role: .cancel) {}
         } message: { Text("Something went wrong while writing the file. Try again.") }
-        .onAppear { tabs.add(notebookID) }
+        .onAppear {
+            tabs.add(notebookID)
+            if currentPageID == nil, let id = LastPage.get(notebookID), notebook.pages.contains(where: { $0.id == id }) {
+                currentPageID = id
+            }
+        }
+        .onChange(of: currentPageID) { _, id in
+            if let id { LastPage.set(id, in: notebookID) }
+        }
         .onDisappear { store.touch(notebookID) }
     }
 
@@ -164,9 +187,9 @@ struct NotebookEditorView: View {
 
     private func pagesScroll(_ notebook: Node, width: CGFloat) -> some View {
         let available = max(width - 48, 200)
-        let pageWidth = min(available, PageMetrics.width * 1.15)
+        let pageWidth = min(available, PageMetrics.width * 1.15) * zoom
         let atTop = settings.dockAtTop
-        return ScrollView {
+        return ScrollView(zoom > 1.01 ? [.vertical, .horizontal] : .vertical) {
             LazyVStack(spacing: 28) {
                 ForEach(notebook.pages) { page in
                     pageView(page, in: notebook, width: pageWidth)
@@ -181,11 +204,33 @@ struct NotebookEditorView: View {
                 .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
             }
             .scrollTargetLayout()
-            .frame(maxWidth: .infinity)
+            .frame(minWidth: width)
             .padding(.top, atTop ? (settings.dockCollapsed ? 80 : 150) : 20)
         }
         .scrollDisabled(model.pencilDown && settings.palmRejection)
         .scrollPosition(id: $currentPageID)
+        .simultaneousGesture(
+            MagnifyGesture()
+                .onChanged { value in
+                    let base = pinchBase ?? zoom
+                    pinchBase = base
+                    zoom = min(max(base * value.magnification, 1), 4)
+                }
+                .onEnded { _ in pinchBase = nil }
+        )
+        .overlay(alignment: .topTrailing) {
+            if zoom > 1.01 {
+                Button { withAnimation(.snappy) { zoom = 1 } } label: {
+                    Label("\(Int((zoom * 100).rounded()))%", systemImage: "arrow.down.right.and.arrow.up.left")
+                        .font(.footnote.weight(.semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(.regularMaterial, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .transition(.opacity)
+            }
+        }
     }
 
     // MARK: Toolbar
@@ -193,16 +238,18 @@ struct NotebookEditorView: View {
     @ToolbarContentBuilder
     private func toolbar(_ notebook: Node) -> some ToolbarContent {
         ToolbarItemGroup(placement: .topBarLeading) {
+            Button { dismiss() } label: { Image(systemName: "chevron.left") }
+                .accessibilityLabel("Back to library")
+            Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                .accessibilityLabel("Settings")
+        }
+        ToolbarItemGroup(placement: .topBarTrailing) {
             if !notebook.isWhiteboard {
                 Button { showPages.toggle() } label: {
                     Image(systemName: showPages ? "sidebar.left" : "square.stack")
                 }
                 .accessibilityLabel(showPages ? "Hide pages" : "Show pages")
             }
-            TabStrip(currentID: notebookID, select: switchTo, close: closeTab) { showOpenPicker = true }
-                .frame(width: min(CGFloat(max(tabs.open.count, 1)) * 196 + 44, 520))
-        }
-        ToolbarItemGroup(placement: .topBarTrailing) {
             Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
                 .accessibilityLabel("Undo")
             Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }

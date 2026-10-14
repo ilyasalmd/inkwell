@@ -270,8 +270,7 @@ struct NodeInteractions: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onTapGesture(count: 2) { open(node) }
-            .onTapGesture { selected = node.id }
+            .onTapGesture { open(node) }
             .draggable(NodeRef(id: node.id)) {
                 NodeIcon(node: node, size: 56).opacity(0.9)
             }
@@ -315,12 +314,37 @@ struct NodeMenu: ViewModifier {
         content.contextMenu {
             Button("Open", systemImage: "arrow.up.forward.square") { open(node) }
             Button("Rename", systemImage: "pencil") { rename(node) }
+            Menu("Colour", systemImage: "paintpalette") {
+                ForEach(CoverDesign.presets, id: \.name) { preset in
+                    Button { recolour(preset.primary, preset.secondary) } label: {
+                        Label { Text(preset.name) } icon: { Image(uiImage: Self.swatch(preset.primary)) }
+                    }
+                }
+                Divider()
+                Button("Custom colour…", systemImage: "eyedropper") { customise(node) }
+            }
             Button("Duplicate", systemImage: "plus.square.on.square") { store.duplicate(node.id) }
             Button("Move to…", systemImage: "folder") { move(node) }
             Button(node.isFolder ? "Customise…" : "Design cover…", systemImage: "paintbrush.pointed") { customise(node) }
             Divider()
             Button("Delete", systemImage: "trash", role: .destructive) { delete(node) }
         }
+    }
+
+    private func recolour(_ primary: UInt32, _ secondary: UInt32) {
+        var design = node.coverDesign
+        design.primary = primary
+        design.secondary = secondary
+        store.setCover(node.id, design)
+    }
+
+    /// A coloured dot that keeps its colour inside a menu.
+    private static func swatch(_ hex: UInt32) -> UIImage {
+        let size = CGSize(width: 20, height: 20)
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            UIColor(hex: hex).setFill()
+            UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).fill()
+        }.withRenderingMode(.alwaysOriginal)
     }
 }
 
