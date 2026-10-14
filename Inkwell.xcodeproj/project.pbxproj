@@ -19,6 +19,7 @@
 		443D455D1BF305C4DCC379CF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C402D55B865C0DECA46263A /* RootView.swift */; };
 		44CCC00336A188E81430CD5E /* PageStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10E6E50E2B5C85CD2CADBC9D /* PageStrip.swift */; };
 		4FB0FE146BF606000A7BB15C /* LinkedFolders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AEC9BD05FB10405565298D5 /* LinkedFolders.swift */; };
+		52467A4F1F153A7D82CF7CEF /* ClaudeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B42C8ACB44BE5B8711F547 /* ClaudeBridge.swift */; };
 		58D500CD904171846B1EB190 /* SchedulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 065AD49135FCEC5038603E9B /* SchedulesView.swift */; };
 		75CAB252387A441B0C34BE8C /* FolderBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C528270279E5BDE6EDAC0AE /* FolderBrowser.swift */; };
 		8A51F48C19E33C3B6DA78E45 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9823D85C49304DC86A45A7A /* CalendarService.swift */; };
@@ -30,6 +31,7 @@
 		B2BA2EA95035E58FBA72AD30 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */; };
 		BD9FFF781C2026EEBBB960F7 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 031D1EC8641A92A5B1C064DF /* Models.swift */; };
 		BE55B81D3D2F34A77A2D669D /* InkwellApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BF2CBDC55A9BEB4BF6057D /* InkwellApp.swift */; };
+		C10101C58A1A95CA246F3B55 /* ScribbleEraser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */; };
 		C310946CAD698164800BD281 /* CoverItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */; };
 		C5673DE986508E99E0E268C6 /* LinkedFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091A1EF79277D7BEC3972207 /* LinkedFoldersView.swift */; };
 		C9D335E13AF36DF5FE6AA39B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */; };
@@ -45,6 +47,7 @@
 		08D5E2E41BB2EC05602F1468 /* NotebookTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookTabs.swift; sourceTree = "<group>"; };
 		091A1EF79277D7BEC3972207 /* LinkedFoldersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedFoldersView.swift; sourceTree = "<group>"; };
 		10E6E50E2B5C85CD2CADBC9D /* PageStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageStrip.swift; sourceTree = "<group>"; };
+		11B42C8ACB44BE5B8711F547 /* ClaudeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeBridge.swift; sourceTree = "<group>"; };
 		1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		26A5A86D94E2F0B6EBA77B76 /* Inkwell.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Inkwell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2F089D5590706CB7EFDABA50 /* Cover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cover.swift; sourceTree = "<group>"; };
@@ -60,6 +63,7 @@
 		8C402D55B865C0DECA46263A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArrangeView.swift; sourceTree = "<group>"; };
 		9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScribbleEraser.swift; sourceTree = "<group>"; };
 		AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		BC2888BD8FB11B1955B7236E /* NotebookExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookExporter.swift; sourceTree = "<group>"; };
 		BECF27EABD512571A720D1C0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -107,6 +111,7 @@
 				10E6E50E2B5C85CD2CADBC9D /* PageStrip.swift */,
 				FBC53F8073945E96608C960C /* PageTemplates.swift */,
 				E6904DBEAEB4CBBFD21D6412 /* PenDock.swift */,
+				A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */,
 				52297A9EE5B17A2434961517 /* WhiteboardView.swift */,
 			);
 			path = Editor;
@@ -116,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				E9823D85C49304DC86A45A7A /* CalendarService.swift */,
+				11B42C8ACB44BE5B8711F547 /* ClaudeBridge.swift */,
 				3AEC9BD05FB10405565298D5 /* LinkedFolders.swift */,
 				1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */,
 			);
@@ -234,6 +240,7 @@
 			files = (
 				B2BA2EA95035E58FBA72AD30 /* AppSettings.swift in Sources */,
 				8A51F48C19E33C3B6DA78E45 /* CalendarService.swift in Sources */,
+				52467A4F1F153A7D82CF7CEF /* ClaudeBridge.swift in Sources */,
 				A9B7FFE3E8C41B82D2F70CE0 /* Cover.swift in Sources */,
 				1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */,
 				2BCB2CDBDA7480EE977189CA /* CoverDesigner.swift in Sources */,
@@ -257,6 +264,7 @@
 				A87412D9A9DB5A794EF34DB2 /* PenDock.swift in Sources */,
 				443D455D1BF305C4DCC379CF /* RootView.swift in Sources */,
 				58D500CD904171846B1EB190 /* SchedulesView.swift in Sources */,
+				C10101C58A1A95CA246F3B55 /* ScribbleEraser.swift in Sources */,
 				F7D88505695EE574D8C8EBCB /* SettingsView.swift in Sources */,
 				D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */,
 				04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */,
@@ -330,7 +338,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -395,7 +403,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -482,7 +490,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

@@ -1,0 +1,11 @@
+{
+  "name": "inkwell-plugins",
+  "owner": { "name": "Inkwell" },
+  "plugins": [
+    {
+      "name": "inkwell",
+      "source": "./inkwell",
+      "description": "Let Claude see the Inkwell notebook pages you are writing, without screenshots."
+    }
+  ]
+}

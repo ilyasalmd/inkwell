@@ -129,6 +129,13 @@ final class EditorModel {
         didSet { UserDefaults.standard.set(try? JSONEncoder().encode(savedStyles), forKey: "inkwell.penStyles") }
     }
 
+    /// Scribble back and forth over ink to erase it.
+    var scribbleErase: Bool = UserDefaults.standard.object(forKey: "inkwell.scribbleErase") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(scribbleErase, forKey: "inkwell.scribbleErase") }
+    }
+    /// True while the Pencil is on the page (and for a moment after), so the page doesn't scroll under a resting palm.
+    var pencilDown = false
+
     var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode, eraserSize: eraserSize) }
 
     func saveCurrentStyle() {

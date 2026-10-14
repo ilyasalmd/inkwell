@@ -1,4 +1,5 @@
 import SwiftUI
+import PencilKit
 
 // MARK: - Themes
 
@@ -99,6 +100,15 @@ final class AppSettings {
     var dockCollapsed: Bool { didSet { defaults.set(dockCollapsed, forKey: "dockCollapsed") } }
     var dockAtTop: Bool { didSet { defaults.set(dockAtTop, forKey: "dockAtTop") } }
     var drawWithFinger: Bool { didSet { defaults.set(drawWithFinger, forKey: "drawWithFinger") } }
+    /// While writing with the Pencil, ignore resting palms and stray fingers.
+    var palmRejection: Bool { didSet { defaults.set(palmRejection, forKey: "palmRejection") } }
+    /// Left-handed layout: pen tray and page strip mirror so your hand doesn't cover them.
+    var leftHanded: Bool { didSet { defaults.set(leftHanded, forKey: "leftHanded") } }
+
+    /// With finger drawing off (the default on iPad), only the Pencil writes and palms never leave a mark.
+    var drawingPolicy: PKCanvasViewDrawingPolicy {
+        drawWithFinger ? .anyInput : .pencilOnly
+    }
 
     var theme: InkTheme { themeID.theme }
 
@@ -118,5 +128,7 @@ final class AppSettings {
         dockCollapsed = d.bool(forKey: "dockCollapsed")
         dockAtTop = d.bool(forKey: "dockAtTop")
         drawWithFinger = d.object(forKey: "drawWithFinger") as? Bool ?? fingerDefault
+        palmRejection = d.object(forKey: "palmRejection") as? Bool ?? true
+        leftHanded = d.bool(forKey: "leftHanded")
     }
 }

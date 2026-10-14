@@ -14,7 +14,7 @@ struct BoardCanvas: UIViewRepresentable {
     let pageID: UUID
     let paper: PaperColor
     let spec: ToolSpec
-    let finger: Bool
+    let policy: PKCanvasViewDrawingPolicy
     let store: LibraryStore
     let model: EditorModel
     @Binding var viewport: Viewport
@@ -33,6 +33,7 @@ struct BoardCanvas: UIViewRepresentable {
         v.showsVerticalScrollIndicator = false
         v.bounces = false
         v.drawing = store.drawing(for: pageID)
+        context.coordinator.scribble = ScribbleWatcher(drawing: v.drawing)
         v.delegate = context.coordinator
         model.activeCanvas = v
         model.boardCanvas = v
@@ -57,7 +58,7 @@ struct BoardCanvas: UIViewRepresentable {
 
     private func apply(to v: PKCanvasView) {
         v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
-        v.drawingPolicy = finger ? .anyInput : .pencilOnly
+        v.drawingPolicy = policy
         v.tool = spec.makeTool()
     }
 
@@ -67,6 +68,7 @@ struct BoardCanvas: UIViewRepresentable {
         let model: EditorModel
         var viewport: Binding<Viewport>
         var positioned = false
+        var scribble: ScribbleWatcher?
 
         init(pageID: UUID, store: LibraryStore, model: EditorModel, viewport: Binding<Viewport>) {
             self.pageID = pageID
@@ -77,6 +79,9 @@ struct BoardCanvas: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             store.saveDrawing(canvasView.drawing, pageID: pageID)
+            let id = pageID, store = store
+            scribble?.didChange(canvasView, enabled: model.scribbleErase, haptic: { [model] in model.haptic?(nil) },
+                                save: { store.saveDrawing($0, pageID: id) })
         }
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
@@ -159,7 +164,7 @@ struct WhiteboardView: View {
         ZStack {
             BoardGrid(template: page.template, paper: page.paper, viewport: viewport)
             BoardCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
-                        finger: settings.drawWithFinger, store: store, model: model, viewport: $viewport)
+                        policy: settings.drawingPolicy, store: store, model: model, viewport: $viewport)
         }
         .clipped()
         .ignoresSafeArea(.container, edges: .bottom)

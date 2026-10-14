@@ -109,6 +109,7 @@ struct RootView: View {
     }
 
     private func startup() async {
+        ClaudeBridge.shared.store = store
         if settings.iCloudEnabled {
             let ok = await store.setICloud(true)
             if !ok { settings.iCloudEnabled = false }
@@ -118,6 +119,7 @@ struct RootView: View {
         await notifications.reschedule(rules: store.rules, enabled: settings.notificationsEnabled)
         NotificationService.scheduleRefresh(rules: store.rules)
         await linked.syncAll(into: store)
+        ClaudeBridge.shared.syncAll()
     }
 
     private func runSchedules() {

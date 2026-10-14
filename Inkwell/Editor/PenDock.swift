@@ -169,12 +169,24 @@ struct PenDock: View {
 
     private var expanded: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            handle
-            pens
-            if model.kind.usesColor { styleButton } else if model.kind == .eraser { eraserButton }
-            collapseButton
+            if settings.leftHanded {
+                collapseButton
+                styleOrEraser
+                pens
+                handle
+            } else {
+                handle
+                pens
+                styleOrEraser
+                collapseButton
+            }
         }
         .padding(.horizontal, 12)
+    }
+
+    @ViewBuilder
+    private var styleOrEraser: some View {
+        if model.kind.usesColor { styleButton } else if model.kind == .eraser { eraserButton }
     }
 
     private var handle: some View {
@@ -393,6 +405,12 @@ struct EraserPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Eraser").font(.headline)
+            Toggle(isOn: $model.scribbleErase) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Scribble to erase").font(.body.weight(.semibold))
+                    Text("Zig-zag over ink with any pen").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             ForEach(EraserMode.allCases) { mode in
                 Button { withAnimation(.snappy) { model.eraserMode = mode } } label: {
                     HStack(spacing: 12) {

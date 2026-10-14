@@ -7,7 +7,7 @@ struct InkCanvas: UIViewRepresentable {
     let pageID: UUID
     let paper: PaperColor
     let spec: ToolSpec
-    let finger: Bool
+    let policy: PKCanvasViewDrawingPolicy
     let store: LibraryStore
     let model: EditorModel
 
@@ -19,6 +19,7 @@ struct InkCanvas: UIViewRepresentable {
         v.isOpaque = false
         v.isScrollEnabled = false
         v.drawing = store.drawing(for: pageID)
+        context.coordinator.scribble = ScribbleWatcher(drawing: v.drawing)
         v.delegate = context.coordinator
         apply(to: v)
         return v
@@ -30,7 +31,7 @@ struct InkCanvas: UIViewRepresentable {
 
     private func apply(to v: PKCanvasView) {
         v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
-        v.drawingPolicy = finger ? .anyInput : .pencilOnly
+        v.drawingPolicy = policy
         v.tool = spec.makeTool()
     }
 
@@ -38,6 +39,7 @@ struct InkCanvas: UIViewRepresentable {
         let pageID: UUID
         let store: LibraryStore
         let model: EditorModel
+        var scribble: ScribbleWatcher?
 
         init(pageID: UUID, store: LibraryStore, model: EditorModel) {
             self.pageID = pageID
@@ -47,10 +49,21 @@ struct InkCanvas: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             store.saveDrawing(canvasView.drawing, pageID: pageID)
+            let id = pageID, store = store
+            scribble?.didChange(canvasView, enabled: model.scribbleErase, haptic: { [model] in model.haptic?(nil) },
+                                save: { store.saveDrawing($0, pageID: id) })
         }
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             model.activeCanvas = canvasView
+            model.pencilDown = true
+        }
+
+        func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+            Task { @MainActor [model] in
+                try? await Task.sleep(for: .milliseconds(450))
+                model.pencilDown = false
+            }
         }
     }
 }
@@ -88,15 +101,11 @@ struct NotebookEditorView: View {
     }
 
     private func editor(_ notebook: Node) -> some View {
-        HStack(spacing: 0) {
-            if showPages && !notebook.isWhiteboard {
-                PageStrip(notebook: notebook, currentPageID: currentPageID ?? notebook.pages.first?.id) { id in
-                    withAnimation(.snappy) { currentPageID = id }
-                }
-                .transition(.move(edge: .leading))
-                Divider()
-            }
+        let left = settings.leftHanded
+        return HStack(spacing: 0) {
+            if showPages && !notebook.isWhiteboard && !left { pageStrip(notebook, edge: .leading) }
             canvasArea(notebook)
+            if showPages && !notebook.isWhiteboard && left { pageStrip(notebook, edge: .trailing) }
         }
         .animation(.snappy, value: showPages)
         .navigationBarTitleDisplayMode(.inline)
@@ -117,6 +126,16 @@ struct NotebookEditorView: View {
         } message: { Text("Something went wrong while writing the file. Try again.") }
         .onAppear { tabs.add(notebookID) }
         .onDisappear { store.touch(notebookID) }
+    }
+
+    @ViewBuilder
+    private func pageStrip(_ notebook: Node, edge: Edge) -> some View {
+        if edge == .trailing { Divider() }
+        PageStrip(notebook: notebook, currentPageID: currentPageID ?? notebook.pages.first?.id) { id in
+            withAnimation(.snappy) { currentPageID = id }
+        }
+        .transition(.move(edge: edge))
+        if edge == .leading { Divider() }
     }
 
     // MARK: Canvas area
@@ -165,6 +184,7 @@ struct NotebookEditorView: View {
             .frame(maxWidth: .infinity)
             .padding(.top, atTop ? (settings.dockCollapsed ? 80 : 150) : 20)
         }
+        .scrollDisabled(model.pencilDown && settings.palmRejection)
         .scrollPosition(id: $currentPageID)
     }
 
@@ -257,7 +277,7 @@ struct NotebookEditorView: View {
                     TemplateBackground(template: page.template, paper: page.paper)
                 }
                 InkCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
-                          finger: settings.drawWithFinger, store: store, model: model)
+                          policy: settings.drawingPolicy, store: store, model: model)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 6))

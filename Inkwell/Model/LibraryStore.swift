@@ -396,6 +396,7 @@ final class LibraryStore {
         drawingCache[pageID] = drawing
         drawingRevision[pageID, default: 0] += 1
         storage.writeDrawing(drawing.dataRepresentation(), pageID: pageID)
+        ClaudeBridge.shared.pageChanged(pageID)
     }
 
     // MARK: Schedules
