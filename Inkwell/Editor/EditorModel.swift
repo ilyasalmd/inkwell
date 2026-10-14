@@ -133,8 +133,22 @@ final class EditorModel {
     var scribbleErase: Bool = UserDefaults.standard.object(forKey: "inkwell.scribbleErase") as? Bool ?? true {
         didSet { UserDefaults.standard.set(scribbleErase, forKey: "inkwell.scribbleErase") }
     }
-    /// True while the Pencil is on the page (and for a moment after), so the page doesn't scroll under a resting palm.
+    /// True while the Pencil is on the page and for a moment after, so a resting palm can't scroll, zoom or tap things.
     var pencilDown = false
+    @ObservationIgnored private var pencilSettle: Task<Void, Never>?
+
+    func pencilBegan() {
+        pencilSettle?.cancel()
+        pencilDown = true
+    }
+
+    func pencilEnded() {
+        pencilSettle?.cancel()
+        pencilSettle = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(1500))
+            if !Task.isCancelled { self?.pencilDown = false }
+        }
+    }
 
     var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode, eraserSize: eraserSize) }
 

@@ -56,14 +56,11 @@ struct InkCanvas: UIViewRepresentable {
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             model.activeCanvas = canvasView
-            model.pencilDown = true
+            model.pencilBegan()
         }
 
         func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
-            Task { @MainActor [model] in
-                try? await Task.sleep(for: .milliseconds(450))
-                model.pencilDown = false
-            }
+            model.pencilEnded()
         }
     }
 }
@@ -194,13 +191,8 @@ struct NotebookEditorView: View {
                 ForEach(notebook.pages) { page in
                     pageView(page, in: notebook, width: pageWidth)
                 }
-                Button {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { store.addPage(to: notebookID) }
-                } label: {
-                    Label("Add page", systemImage: "plus")
-                        .padding(.horizontal, 18).padding(.vertical, 10)
-                        .background(Color.accentColor.opacity(0.14), in: Capsule())
-                }
+                addPageButton
+                    .allowsHitTesting(!(model.pencilDown && settings.palmRejection))
                 .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
             }
             .scrollTargetLayout()
@@ -212,6 +204,7 @@ struct NotebookEditorView: View {
         .simultaneousGesture(
             MagnifyGesture()
                 .onChanged { value in
+                    guard !(model.pencilDown && settings.palmRejection) else { return }
                     let base = pinchBase ?? zoom
                     pinchBase = base
                     zoom = min(max(base * value.magnification, 1), 4)
@@ -231,6 +224,24 @@ struct NotebookEditorView: View {
                 .transition(.opacity)
             }
         }
+    }
+
+    /// With palm rejection on, adding a page from the bottom of the notebook takes a deliberate press-and-hold,
+    /// so a resting palm can't trigger it.
+    private var addPageButton: some View {
+        let add = { withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { store.addPage(to: notebookID) } }
+        let label = Label(settings.palmRejection ? "Hold to add page" : "Add page", systemImage: "plus")
+            .padding(.horizontal, 18).padding(.vertical, 10)
+            .background(Color.accentColor.opacity(0.14), in: Capsule())
+        return Group {
+            if settings.palmRejection {
+                label.contentShape(Capsule()).onLongPressGesture(minimumDuration: 0.6) { add() }
+            } else {
+                Button(action: add) { label }
+            }
+        }
+        .accessibilityLabel("Add page")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: Toolbar
