@@ -167,7 +167,19 @@ struct AddPagePanel: View {
     var startPaper: PaperColor
     var onAdd: (PageTemplate?, PaperColor) -> Void
     @State private var paper: PaperColor
+    @AppStorage("inkwell.recentTemplates") private var recentRaw = ""
     @Environment(\.dismiss) private var dismiss
+
+    private var recentTemplates: [PageTemplate] {
+        recentRaw.split(separator: ",").compactMap { PageTemplate(rawValue: String($0)) }
+    }
+
+    private func choose(_ t: PageTemplate) {
+        let list = ([t.rawValue] + recentRaw.split(separator: ",").map(String.init).filter { $0 != t.rawValue }).prefix(3)
+        recentRaw = list.joined(separator: ",")
+        onAdd(t, paper)
+        dismiss()
+    }
 
     init(startPaper: PaperColor, onAdd: @escaping (PageTemplate?, PaperColor) -> Void) {
         self.startPaper = startPaper
@@ -178,12 +190,27 @@ struct AddPagePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Add a page").font(.headline)
+            if !recentTemplates.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recent").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    HStack(spacing: 14) {
+                        ForEach(recentTemplates) { t in
+                            Button { choose(t) } label: {
+                                VStack(spacing: 6) {
+                                    TemplateThumbnail(template: t, paper: paper, width: 96)
+                                    Text(t.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Add recent \(t.title) page")
+                        }
+                    }
+                }
+                Divider()
+            }
             LazyVGrid(columns: Array(repeating: GridItem(.fixed(96), spacing: 14), count: 3), spacing: 16) {
                 ForEach(PageTemplate.allCases) { t in
-                    Button {
-                        onAdd(t, paper)
-                        dismiss()
-                    } label: {
+                    Button { choose(t) } label: {
                         VStack(spacing: 6) {
                             TemplateThumbnail(template: t, paper: paper, width: 96)
                             Text(t.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)

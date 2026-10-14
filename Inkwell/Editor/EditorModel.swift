@@ -58,16 +58,33 @@ struct ColorPalette: Identifiable {
     ]
 }
 
+enum EraserMode: String, CaseIterable, Identifiable {
+    case stroke, pixel
+    var id: String { rawValue }
+    var title: String { self == .stroke ? "Stroke" : "Pixel" }
+    var detail: String { self == .stroke ? "Removes the whole stroke you touch" : "Rubs out only what you touch" }
+    var symbol: String { self == .stroke ? "scribble.variable" : "circle.dotted" }
+}
+
+/// A named favourite: pen, colour and thickness in one tap.
+struct PenStyle: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var kind: String
+    var hex: UInt32
+    var width: Double
+}
+
 /// Everything the canvases need to configure a PencilKit tool. Equatable so views only update on change.
 struct ToolSpec: Equatable {
     var kind: ToolKind
     var color: UIColor
     var width: CGFloat          // 0...1 fraction of the ink's valid range
+    var eraser: EraserMode = .stroke
 
     func makeTool() -> PKTool {
         switch kind {
         case .eraser:
-            return PKEraserTool(.vector)
+            return PKEraserTool(eraser == .pixel ? .bitmap : .vector)
         case .lasso:
             return PKLassoTool()
         default:
@@ -85,6 +102,8 @@ final class EditorModel {
     var color: UIColor = UIColor(hex: 0x1E3A8A)
     var width: CGFloat = 0.35
     var paletteIndex = 0
+    /// Colours used recently, newest first, kept across launches.
+    var recents: [UInt32] = (UserDefaults.standard.array(forKey: "inkwell.recentColors") as? [Int])?.map { UInt32($0) } ?? []
     /// Where the Apple Pencil squeeze palette is showing. (-1, -1) means "centre of the page area".
     var quickPalettePoint: CGPoint?
     @ObservationIgnored var previousKind: ToolKind = .pen
@@ -92,7 +111,32 @@ final class EditorModel {
     @ObservationIgnored weak var activeCanvas: PKCanvasView?
     @ObservationIgnored weak var boardCanvas: PKCanvasView?
 
-    var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width) }
+    var eraserMode: EraserMode = EraserMode(rawValue: UserDefaults.standard.string(forKey: "inkwell.eraserMode") ?? "") ?? .stroke {
+        didSet { UserDefaults.standard.set(eraserMode.rawValue, forKey: "inkwell.eraserMode") }
+    }
+    var savedStyles: [PenStyle] = (UserDefaults.standard.data(forKey: "inkwell.penStyles")).flatMap { try? JSONDecoder().decode([PenStyle].self, from: $0) } ?? [] {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(savedStyles), forKey: "inkwell.penStyles") }
+    }
+
+    var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode) }
+
+    func saveCurrentStyle() {
+        guard kind.usesColor else { return }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: nil)
+        let hex = UInt32(r * 255 + 0.5) << 16 | UInt32(g * 255 + 0.5) << 8 | UInt32(b * 255 + 0.5)
+        let style = PenStyle(kind: kind.rawValue, hex: hex, width: Double(width))
+        guard !savedStyles.contains(where: { $0.kind == style.kind && $0.hex == hex && abs($0.width - style.width) < 0.01 }) else { return }
+        savedStyles = Array((savedStyles + [style]).suffix(8))
+        haptic?(nil)
+    }
+
+    func apply(_ style: PenStyle) {
+        if let k = ToolKind(rawValue: style.kind) { select(k) }
+        color = UIColor(hex: style.hex)
+        width = CGFloat(style.width)
+        haptic?(nil)
+    }
 
     func select(_ k: ToolKind) {
         guard k != kind else { return }
@@ -101,9 +145,21 @@ final class EditorModel {
         haptic?(nil)
     }
 
-    func pick(_ c: UIColor) {
+    func pick(_ c: UIColor, remember: Bool = true) {
         color = c
         haptic?(nil)
+        if remember { noteRecent(c) }
+    }
+
+    /// Puts a colour at the front of the recent row (no duplicates, at most 8).
+    func noteRecent(_ c: UIColor) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        c.getRed(&r, green: &g, blue: &b, alpha: nil)
+        let hex = UInt32(r * 255 + 0.5) << 16 | UInt32(g * 255 + 0.5) << 8 | UInt32(b * 255 + 0.5)
+        recents.removeAll { $0 == hex }
+        recents.insert(hex, at: 0)
+        recents = Array(recents.prefix(8))
+        UserDefaults.standard.set(recents.map { Int($0) }, forKey: "inkwell.recentColors")
     }
 
     /// Zooms the whiteboard to show everything drawn, or back to 100% around the centre when it is empty.

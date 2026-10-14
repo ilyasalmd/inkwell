@@ -171,7 +171,7 @@ struct PenDock: View {
         HStack(alignment: .bottom, spacing: 8) {
             handle
             pens
-            if model.kind.usesColor { styleButton }
+            if model.kind.usesColor { styleButton } else if model.kind == .eraser { eraserButton }
             collapseButton
         }
         .padding(.horizontal, 12)
@@ -221,6 +221,24 @@ struct PenDock: View {
         }
     }
 
+    private var eraserButton: some View {
+        Button { showStyle.toggle() } label: {
+            HStack(spacing: 8) {
+                Image(systemName: model.eraserMode.symbol).font(.system(size: 16, weight: .semibold))
+                Text(model.eraserMode.title).font(.subheadline.weight(.semibold))
+            }
+            .padding(.horizontal, 16).frame(height: 46)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.1), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Eraser type: \(model.eraserMode.title)")
+        .popover(isPresented: $showStyle, arrowEdge: settings.dockAtTop ? .top : .bottom) {
+            EraserPanel(model: model)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
     private var pens: some View {
         let inkColor = model.kind.usesColor ? Color(model.color) : Color.secondary
         return ScrollView(.horizontal, showsIndicators: false) {
@@ -228,7 +246,7 @@ struct PenDock: View {
                 ForEach(ToolKind.allCases) { k in
                     let selected = model.kind == k
                     Button {
-                        if selected && k.usesColor {
+                        if selected && (k.usesColor || k == .eraser) {
                             showStyle.toggle()
                         } else {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.68)) { model.select(k) }
@@ -285,10 +303,30 @@ struct InkStylePanel: View {
                 }
                 ColorPicker("Custom colour", selection: Binding(
                     get: { Color(model.color) },
-                    set: { model.pick(UIColor($0)) }
+                    set: { model.pick(UIColor($0), remember: false) }
                 ), supportsOpacity: false)
                 .labelsHidden()
                 .frame(width: 34, height: 34)
+            }
+
+            savedStylesSection
+
+            if !model.recents.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Recent").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        ForEach(model.recents, id: \.self) { hex in
+                            Button { withAnimation(.snappy) { model.pick(UIColor(hex: hex)) } } label: {
+                                Circle().fill(Color(hex: hex))
+                                    .frame(width: 24, height: 24)
+                                    .overlay(Circle().stroke(Color.primary.opacity(0.22), lineWidth: 1))
+                                    .frame(width: 32, height: 32)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Recent colour \(String(hex, radix: 16))")
+                        }
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -305,7 +343,76 @@ struct InkStylePanel: View {
             }
         }
         .padding(20)
-        .frame(width: 300)
+        .frame(width: 320)
+        .onDisappear { model.noteRecent(model.color) }
+    }
+}
+
+extension InkStylePanel {
+    @ViewBuilder var savedStylesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Saved pens").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
+                Spacer()
+                Button { withAnimation(.snappy) { model.saveCurrentStyle() } } label: {
+                    Label("Save this pen", systemImage: "plus").font(.footnote.weight(.semibold))
+                }
+            }
+            if model.savedStyles.isEmpty {
+                Text("Save a pen, colour and thickness to get back to it in one tap.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(56), spacing: 8), count: 4), spacing: 8) {
+                    ForEach(model.savedStyles) { style in
+                        Button { withAnimation(.snappy) { model.apply(style) } } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: ToolKind(rawValue: style.kind)?.symbol ?? "pencil.tip")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Capsule().fill(Color(hex: style.hex)).frame(width: 30, height: 3 + style.width * 9)
+                            }
+                            .frame(width: 56, height: 52)
+                            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Remove", systemImage: "trash", role: .destructive) {
+                                model.savedStyles.removeAll { $0.id == style.id }
+                            }
+                        }
+                        .accessibilityLabel("\(ToolKind(rawValue: style.kind)?.title ?? "Pen") saved pen")
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct EraserPanel: View {
+    @Bindable var model: EditorModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Eraser").font(.headline)
+            ForEach(EraserMode.allCases) { mode in
+                Button { withAnimation(.snappy) { model.eraserMode = mode } } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: mode.symbol).font(.system(size: 20, weight: .medium)).frame(width: 30)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(mode.title).font(.body.weight(.semibold))
+                            Text(mode.detail).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if model.eraserMode == mode { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
+                    }
+                    .padding(12)
+                    .background(model.eraserMode == mode ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.06),
+                                in: RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(20)
+        .frame(width: 320)
     }
 }
 
