@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell</title>
+<meta name="description" content="Inkwell is a free, open source handwriting notes app for iPad and Mac, built around Apple Pencil.">
+<style>
+  :root {
+    --bg: #f6f3ec; --ink: #1b2a41; --muted: #5b6676; --card: #ffffff; --line: #e1dccf; --accent: #e9694b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --ink: #eef0f4; --muted: #9aa3b2; --card: #1c2028; --line: #2b313c; --accent: #f17c60; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 ui-serif, Georgia, "Iowan Old Style", serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
+  header { padding: 72px 0 36px; }
+  h1 { font-size: clamp(44px, 9vw, 72px); line-height: 1; margin: 0 0 14px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .lede { font-size: 21px; color: var(--muted); max-width: 34em; margin: 0; }
+  h2 { font-size: 24px; margin: 52px 0 6px; }
+  p, li { color: var(--ink); }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .card h3 { margin: 0 0 4px; font-size: 20px; }
+  .card p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font: 600 16px/1 -apple-system, system-ui, sans-serif; padding: 13px 20px; border-radius: 999px; }
+  a.btn:hover { filter: brightness(1.06); }
+  a.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  ol { padding-left: 1.3em; }
+  li { margin: 8px 0; }
+  code { font: 14px ui-monospace, Menlo, monospace; background: var(--card); border: 1px solid var(--line); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+  .note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; color: var(--muted); font-size: 15px; margin: 22px 0; }
+  ul.feat { columns: 2 260px; padding-left: 1.2em; color: var(--muted); }
+  footer { margin-top: 64px; color: var(--muted); font-size: 14px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ink<span>well</span></h1>
+    <p class="lede">A free, open source handwriting notes app for iPad and Mac, built around Apple Pencil. Folders like Finder, notebooks you can design, and schedules that make your weekly notebooks for you.</p>
+  </header>
+
+  <h2>Download</h2>
+  <p class="sub">No account and no App Store. Pick your device.</p>
+  <div class="cards">
+    <section class="card">
+      <h3>Mac</h3>
+      <p>Open the disk image and drag Inkwell to Applications. Requires macOS 15 or later.</p>
+      <a class="btn" id="dl-dmg" href="#">Download Inkwell.dmg</a>
+    </section>
+    <section class="card">
+      <h3>iPad</h3>
+      <p>Install with AltStore or SideStore (steps below). Requires iPadOS 18 or later.</p>
+      <a class="btn" id="dl-ipa" href="#">Download Inkwell.ipa</a>
+      <p style="margin:14px 0 0"><a href="#" id="dl-source" class="btn ghost">Add to AltStore</a></p>
+    </section>
+  </div>
+
+  <h2>Install on iPad</h2>
+  <p class="sub">iPadOS only runs apps signed by an Apple ID, so a sideloading tool signs Inkwell with yours. It is free.</p>
+  <ol>
+    <li>Install <strong>AltStore</strong> or <strong>SideStore</strong> on your iPad. Follow the steps on <code>altstore.io</code> or <code>sidestore.io</code>.</li>
+    <li>On the iPad, tap <strong>Add to AltStore</strong> above, or open <code>Inkwell.ipa</code> from Files and choose Share, then AltStore.</li>
+    <li>Open Inkwell from the Home Screen. If iPadOS asks, go to Settings, General, VPN &amp; Device Management and trust your Apple ID.</li>
+  </ol>
+  <p class="note">With a free Apple ID, apps stop opening after 7 days. AltStore renews them automatically while it can reach your Mac or Wi-Fi. With a paid Apple Developer account the limit is a year.</p>
+
+  <h2>Install on Mac</h2>
+  <ol>
+    <li>Download <code>Inkwell.dmg</code> and open it.</li>
+    <li>Drag Inkwell onto the Applications folder.</li>
+    <li>If macOS says it can't verify the app, right-click Inkwell in Applications, choose Open, then Open again. This happens only until a release has been notarized by Apple.</li>
+  </ol>
+
+  <h2>What it does</h2>
+  <ul class="feat">
+    <li>Apple Pencil Pro squeeze and double-tap, pressure and tilt</li>
+    <li>Pens, highlighters, colours and a quick palette</li>
+    <li>Cornell, squared, lined and dotted pages on any paper colour</li>
+    <li>Notebook cover designer, including drawing your own cover</li>
+    <li>Finder-style folders you can colour and name</li>
+    <li>Schedules that create folders or notebooks every week</li>
+    <li>Calendar-linked suggestions and optional reminders</li>
+    <li>Import PDFs, including Goodnotes exports, and link a folder of PDFs</li>
+    <li>Light, dark and colour themes</li>
+  </ul>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li>iCloud sync is not in the open download, because it needs a paid developer team. Build from source with your own team to switch it on.</li>
+    <li>Goodnotes' own <code>.goodnotes</code> files can't be read. Export a notebook from Goodnotes as PDF and import that.</li>
+    <li>Updates are manual: download the new release, or add the AltStore source and AltStore will tell you.</li>
+  </ul>
+
+  <footer>
+    <p><a href="#" id="dl-repo">Source code and releases on GitHub</a>. Inkwell is released under the MIT licence.</p>
+  </footer>
+</div>
+
+<script>
+  // Works on <owner>.github.io/<repo>/. On a custom domain, set REPO to "owner/repo".
+  var REPO = "";
+  (function () {
+    var repo = REPO;
+    if (!repo && /\.github\.io$/.test(location.hostname)) {
+      var seg = location.pathname.split("/").filter(Boolean)[0];
+      if (seg) repo = location.hostname.split(".")[0] + "/" + seg;
+    }
+    if (!repo) {
+      ["dl-dmg", "dl-ipa", "dl-source", "dl-repo"].forEach(function (id) {
+        var el = document.getElementById(id); el.removeAttribute("href"); el.style.opacity = .5;
+        el.title = "Set REPO in website/index.html";
+      });
+      return;
+    }
+    var rel = "https://github.com/" + repo + "/releases/latest/download/";
+    document.getElementById("dl-dmg").href = rel + "Inkwell.dmg";
+    document.getElementById("dl-ipa").href = rel + "Inkwell.ipa";
+    document.getElementById("dl-repo").href = "https://github.com/" + repo;
+    document.getElementById("dl-source").href = "altstore://source?url=" + encodeURIComponent(rel + "apps.json");
+  })();
+</script>
+</body>
+</html>

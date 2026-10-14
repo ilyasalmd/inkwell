@@ -1,0 +1,7 @@
+*.xcodeproj/xcuserdata/
+build-*/
+build-dmg/
+build-ipa/
+build-mac/
+build/
+dist/
