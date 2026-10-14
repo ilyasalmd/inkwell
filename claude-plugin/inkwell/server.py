@@ -149,7 +149,46 @@ def tool_notebook(args):
     return out
 
 
+def tool_folder(args):
+    index = load_index()
+    q = (args.get("folder") or "").strip().lower()
+    if not q:
+        return [{"type": "text", "text": "Say which Inkwell folder to check, or use inkwell_current_page for what I was just writing."}]
+    books = [b for b in index.get("notebooks", [])
+             if q in b["folder"].lower().split("/") or q in b["folder"].lower() or q == b["name"].lower()]
+    if not books:
+        names = sorted({b["folder"] for b in index.get("notebooks", []) if b["folder"]})
+        return [{"type": "text", "text": f'No Inkwell folder matches "{args.get("folder")}". Folders: ' + (", ".join(names) or "none yet") + "."}]
+    limit = max(1, min(int(args.get("max_pages", 6)), 12))
+    out = [{"type": "text", "text": f'{len(books)} notebook(s) in "{args.get("folder")}" (newest first):\n'
+            + "\n".join(describe(b, index) for b in books)}]
+    shown = 0
+    for b in books:
+        for p in b["pages"]:
+            if shown >= limit:
+                break
+            if not p["hasInk"]:
+                continue
+            img = page_image(p["id"])
+            if img:
+                out += [{"type": "text", "text": f'{b["name"]}, page {p["number"]}:'}, img]
+                shown += 1
+    if shown == 0:
+        out.append({"type": "text", "text": "Nothing written in these notebooks has synced yet."})
+    elif shown >= limit:
+        out.append({"type": "text", "text": f"Showing the first {limit} written pages. Ask for a specific notebook and page to see more."})
+    return out
+
+
 TOOLS = {
+    "inkwell_read_folder": (
+        "Read an Inkwell folder: lists its notebooks and shows their written pages as images. Use this when I say 'check this folder', 'look at my <name> folder' or 'check my Inkwell notes for <subject>'.",
+        {"type": "object", "properties": {
+            "folder": {"type": "string", "description": "Folder name (or part of it), e.g. 'Maths foundations'."},
+            "max_pages": {"type": "integer", "default": 6}},
+         "required": ["folder"]},
+        tool_folder,
+    ),
     "inkwell_current_page": (
         "The page I was just writing on in Inkwell on my iPad (the most recently edited page), as an image. Use this whenever I say 'look at what I'm doing' or 'check my notes'.",
         {"type": "object", "properties": {}},
