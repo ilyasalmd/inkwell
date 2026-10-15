@@ -11,6 +11,7 @@
 		04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52297A9EE5B17A2434961517 /* WhiteboardView.swift */; };
 		140545C12911AB6A43894CE8 /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */; };
 		1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */; };
+		21D831174F0F81A24F332174 /* LibraryBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22519091BE0A9813A46D434 /* LibraryBackup.swift */; };
 		27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3D55E0940961AF9BC2BBFC /* EditorModel.swift */; };
 		27A8E257058CE109332F1096 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA29C0A3F753405E6DFFD2A6 /* LibraryStore.swift */; };
 		2BCB2CDBDA7480EE977189CA /* CoverDesigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086E657AF5037A457F83726C /* CoverDesigner.swift */; };
@@ -67,6 +68,7 @@
 		8C402D55B865C0DECA46263A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArrangeView.swift; sourceTree = "<group>"; };
 		9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A22519091BE0A9813A46D434 /* LibraryBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryBackup.swift; sourceTree = "<group>"; };
 		A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScribbleEraser.swift; sourceTree = "<group>"; };
 		AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmGuard.swift; sourceTree = "<group>"; };
@@ -99,6 +101,7 @@
 				9BD78B7A50181B6BB5D6D5AD /* AppSettings.swift */,
 				2F089D5590706CB7EFDABA50 /* Cover.swift */,
 				6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */,
+				A22519091BE0A9813A46D434 /* LibraryBackup.swift */,
 				640C25A16ACEE95EE5476A05 /* LibraryStorage.swift */,
 				CA29C0A3F753405E6DFFD2A6 /* LibraryStore.swift */,
 				031D1EC8641A92A5B1C064DF /* Models.swift */,
@@ -258,6 +261,7 @@
 				27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */,
 				75CAB252387A441B0C34BE8C /* FolderBrowser.swift in Sources */,
 				BE55B81D3D2F34A77A2D669D /* InkwellApp.swift in Sources */,
+				21D831174F0F81A24F332174 /* LibraryBackup.swift in Sources */,
 				3DFAC7731A21ECD424550B6B /* LibraryStorage.swift in Sources */,
 				27A8E257058CE109332F1096 /* LibraryStore.swift in Sources */,
 				4FB0FE146BF606000A7BB15C /* LinkedFolders.swift in Sources */,
@@ -350,7 +354,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -415,7 +419,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -502,7 +506,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

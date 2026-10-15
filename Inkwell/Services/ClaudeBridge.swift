@@ -29,18 +29,28 @@ final class ClaudeBridge {
 
     // MARK: Triggers
 
-    /// Called whenever ink changes. Waits until you pause, then refreshes just that page.
+    /// Called whenever ink changes. Waits for a short pause in your writing, then refreshes just that page.
     func pageChanged(_ pageID: UUID) {
         guard enabled else { return }
         lastEdited = (pageID, Date())
         pending[pageID]?.cancel()
         pending[pageID] = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2.5))
+            try? await Task.sleep(for: .seconds(0.8))
             guard !Task.isCancelled, let self else { return }
             self.render(pageID)
             self.writeIndex()
             self.pending[pageID] = nil
         }
+    }
+
+    /// Sends any page still waiting for a pause right now (used when you leave the app).
+    func flush() {
+        guard enabled, !pending.isEmpty else { return }
+        let ids = Array(pending.keys)
+        pending.values.forEach { $0.cancel() }
+        pending.removeAll()
+        ids.forEach(render)
+        writeIndex()
     }
 
     /// Renders every page that has ink. Runs when the switch is turned on and after launch.
@@ -70,7 +80,7 @@ final class ClaudeBridge {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let file = dir.appendingPathComponent("\(pageID.uuidString).png")
         guard let data = NotebookExporter.pageImageData(page, notebook: node, store: store) else { return }
-        try? data.write(to: file, options: .atomic)
+        write(data, to: file)
     }
 
     private func writeIndex() {
@@ -101,7 +111,16 @@ final class ClaudeBridge {
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         if let data = try? enc.encode(index) {
-            try? data.write(to: folder.appendingPathComponent("index.json"), options: .atomic)
+            write(data, to: folder.appendingPathComponent("index.json"))
+        }
+    }
+
+    /// A coordinated write tells iCloud about the change straight away, so it starts uploading at once instead of
+    /// waiting to notice the file on its own.
+    private func write(_ data: Data, to url: URL) {
+        var err: NSError?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &err) { u in
+            try? data.write(to: u, options: .atomic)
         }
     }
 }

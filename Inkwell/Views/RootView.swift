@@ -47,6 +47,12 @@ struct RootView: View {
         .sheet(isPresented: $showSettings) { SettingsView() }
         .task { await startup() }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                // Make sure every change is on disk before iPadOS can close the app, then back up if one is due.
+                ClaudeBridge.shared.flush()
+                Task { await store.backUp() }
+                return
+            }
             guard phase == .active else { return }
             runSchedules()
             calendar.refresh()
@@ -121,6 +127,7 @@ struct RootView: View {
         NotificationService.scheduleRefresh(rules: store.rules)
         await linked.syncAll(into: store)
         ClaudeBridge.shared.syncAll()
+        await store.backUp()
     }
 
     private func runSchedules() {
@@ -185,14 +192,11 @@ struct SidebarView: View {
         }
     }
 
-    private func count(_ parent: UUID?) -> Int { store.children(of: parent).count }
-
     var body: some View {
         List(selection: $selection) {
             Section {
                 Label("No Folder", systemImage: "tray")
                     .font(.callout)
-                    .badge(store.children(of: nil).filter { !$0.isFolder }.count)
                     .tag(SidebarItem.library)
                     .dropDestination(for: NodeRef.self) { items, _ in
                         items.map { store.move($0.id, to: nil) }.contains(true)
@@ -206,7 +210,6 @@ struct SidebarView: View {
                         Image(systemName: tree.node.cover?.symbol ?? "folder.fill").foregroundStyle(tree.node.displayColor)
                     }
                     .font(.callout)
-                    .badge(count(tree.id))
                     .tag(SidebarItem.folder(tree.id))
                     .dropDestination(for: NodeRef.self) { items, _ in
                         items.map { store.move($0.id, to: tree.id) }.contains(true)

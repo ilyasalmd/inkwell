@@ -73,6 +73,61 @@ final class LibraryStore {
         }
     }
 
+    // MARK: Backups
+
+    /// Writes any pending changes now and, when one is due, takes a backup. Called when the app goes to the
+    /// background and at launch, so a backup is never more than a few hours behind.
+    @discardableResult
+    func backUp(force: Bool = false) async -> LibraryBackup? {
+        flush()
+        let storage = storage
+        #if canImport(UIKit)
+        // Leaving the app gives only a few seconds; ask for enough time to finish copying.
+        let task = UIApplication.shared.beginBackgroundTask(withName: "Inkwell backup")
+        defer { UIApplication.shared.endBackgroundTask(task) }
+        #endif
+        let made = await Task.detached(priority: .utility) { LibraryBackup.snapshot(storage, force: force) }.value
+        backupsChanged += 1
+        return made
+    }
+
+    /// Bumped after each backup so the Settings list refreshes.
+    private(set) var backupsChanged = 0
+
+    var backups: [LibraryBackup] {
+        _ = backupsChanged
+        return LibraryBackup.list(storage)
+    }
+
+    /// Brings a backup back as a copy in a new folder. Nothing already in the library is changed or replaced.
+    /// Returns how many notebooks came back.
+    @discardableResult
+    func restoreCopy(of backup: LibraryBackup) -> Int {
+        let saved = backup.nodes()
+        guard !saved.isEmpty else { return 0 }
+        let title = "Restored " + backup.date.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+        let folder = createFolder(name: title, in: nil, tint: .ink)
+        let newIDs = Dictionary(uniqueKeysWithValues: saved.map { ($0.id, UUID()) })
+        var notebooks = 0
+        for var n in saved {
+            n.id = newIDs[n.id]!
+            n.parentID = n.parentID.flatMap { newIDs[$0] } ?? folder.id
+            n.pages = n.pages.map { page in
+                var p = page
+                p.id = UUID()
+                if let data = backup.drawing(page.id) { storage.writeDrawing(data, pageID: p.id) }
+                return p
+            }
+            if let file = n.pdfFile, !FileManager.default.fileExists(atPath: storage.importURL(file).path) {
+                storage.coordinatedCopy(backup.importURL(file), to: storage.importURL(file))
+            }
+            nodes[n.id] = n
+            if !n.isFolder { notebooks += 1 }
+        }
+        save()
+        return notebooks
+    }
+
     // MARK: iCloud
 
     /// Switches between this device's storage and the iCloud Drive container. Returns false if iCloud is unavailable.

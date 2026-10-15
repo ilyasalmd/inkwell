@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(EditorModel.self) private var editor
     @Environment(\.dismiss) private var dismiss
     @State private var cloudBusy = false
+    @State private var backingUp = false
     @AppStorage(ClaudeBridge.key) private var shareWithClaude = false
 
     var body: some View {
@@ -75,6 +76,37 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    LabeledContent("Last backup") {
+                        if let last = store.backups.first {
+                            Text(last.date, format: .relative(presentation: .named))
+                        } else {
+                            Text("Not yet")
+                        }
+                    }
+                    Button {
+                        backingUp = true
+                        Task {
+                            await store.backUp(force: true)
+                            backingUp = false
+                        }
+                    } label: {
+                        HStack {
+                            Text("Back up now")
+                            if backingUp { Spacer(); ProgressView() }
+                        }
+                    }
+                    .disabled(backingUp)
+                    NavigationLink("Restore from a backup") { BackupsList() }
+                        .disabled(store.backups.isEmpty)
+                } header: {
+                    Text("Backups")
+                } footer: {
+                    Text(store.usingICloud
+                         ? "Everything saves as you write. Inkwell also backs up all your notebooks automatically every few hours and keeps the last \(LibraryBackup.keep) backups in iCloud Drive (Inkwell › Backups), so they're safe even if this iPad is lost. Restoring adds a copy in a new folder and never changes your notebooks."
+                         : "Everything saves as you write. Inkwell also backs up all your notebooks automatically every few hours and keeps the last \(LibraryBackup.keep) backups on this iPad, which your iPad's iCloud Backup includes. Turn on iCloud sync to keep them in iCloud Drive too. Restoring adds a copy in a new folder and never changes your notebooks.")
+                }
+
+                Section {
                     Toggle("Schedule reminders", isOn: Binding(
                         get: { settings.notificationsEnabled },
                         set: { on in
@@ -137,6 +169,40 @@ struct SettingsView: View {
             let ok = await store.setICloud(on)
             settings.iCloudEnabled = on ? ok : false
             cloudBusy = false
+        }
+    }
+}
+
+/// Every saved backup, newest first. Restoring one adds its notebooks as a copy in a new folder.
+private struct BackupsList: View {
+    @Environment(LibraryStore.self) private var store
+    @State private var picked: LibraryBackup?
+    @State private var restored: String?
+
+    var body: some View {
+        List(store.backups) { backup in
+            Button { picked = backup } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(backup.date, format: .dateTime.weekday(.wide).day().month(.wide).hour().minute())
+                        .foregroundStyle(.primary)
+                    Text(backup.date, format: .relative(presentation: .named))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Backups")
+        .confirmationDialog("Restore this backup?", isPresented: Binding(get: { picked != nil }, set: { if !$0 { picked = nil } }),
+                            titleVisibility: .visible, presenting: picked) { backup in
+            Button("Restore a Copy") {
+                let n = store.restoreCopy(of: backup)
+                restored = n == 0 ? "That backup has no notebooks in it."
+                    : "\(n == 1 ? "1 notebook" : "\(n) notebooks") restored into a new folder in your library."
+            }
+        } message: { _ in
+            Text("Its notebooks come back in a new folder. Your current notebooks stay exactly as they are.")
+        }
+        .alert(restored ?? "", isPresented: Binding(get: { restored != nil }, set: { if !$0 { restored = nil } })) {
+            Button("OK", role: .cancel) {}
         }
     }
 }

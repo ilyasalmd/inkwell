@@ -12,8 +12,8 @@ final class LibraryStorage {
     let root: URL
     let isCloud: Bool
 
-    private var nodesDir: URL { root.appendingPathComponent("Library/nodes", isDirectory: true) }
-    private var rulesDir: URL { root.appendingPathComponent("Library/rules", isDirectory: true) }
+    var nodesDir: URL { root.appendingPathComponent("Library/nodes", isDirectory: true) }
+    var rulesDir: URL { root.appendingPathComponent("Library/rules", isDirectory: true) }
     var drawingsDir: URL { root.appendingPathComponent("Drawings", isDirectory: true) }
     var importsDir: URL { root.appendingPathComponent("Imports", isDirectory: true) }
 
@@ -128,7 +128,15 @@ final class LibraryStorage {
         }
     }
 
-    private func coordinatedDelete(_ url: URL) {
+    func coordinatedCopy(_ source: URL, to url: URL) {
+        guard isCloud else { try? FileManager.default.copyItem(at: source, to: url); return }
+        var err: NSError?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &err) { u in
+            try? FileManager.default.copyItem(at: source, to: u)
+        }
+    }
+
+    func coordinatedDelete(_ url: URL) {
         guard isCloud else { try? FileManager.default.removeItem(at: url); return }
         var err: NSError?
         NSFileCoordinator().coordinate(writingItemAt: url, options: .forDeleting, error: &err) { u in

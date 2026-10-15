@@ -167,12 +167,7 @@ struct FolderBrowser: View {
     }
 
     private var subtitle: String {
-        let notebooks = items.filter { !$0.isFolder }.count
-        let folders = items.filter(\.isFolder).count
-        var parts: [String] = []
-        if folders > 0 { parts.append("\(folders) folder\(folders == 1 ? "" : "s")") }
-        if notebooks > 0 { parts.append("\(notebooks) notebook\(notebooks == 1 ? "" : "s")") }
-        return parts.isEmpty ? Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)) : parts.joined(separator: " · ")
+        Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
 
     private var iconGrid: some View {
@@ -363,8 +358,6 @@ struct PathBar: View {
                 crumb(title: n.name, symbol: "folder.fill", tint: n.tint.color, dest: n.id)
             }
             Spacer()
-            Text("\(store.children(of: folderID).count) items")
-                .font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
         .background(.bar)
