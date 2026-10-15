@@ -75,6 +75,13 @@ struct InkCanvas: UIViewRepresentable {
             inUse = false
             PalmGuard.shared.pencilEnded()
         }
+
+        /// Called once the canvas has drawn everything on screen, e.g. after the page view re-fits it at a new zoom.
+        var onRendered: (() -> Void)?
+
+        func canvasViewDidFinishRendering(_ canvasView: PKCanvasView) {
+            onRendered?()
+        }
     }
 }
 

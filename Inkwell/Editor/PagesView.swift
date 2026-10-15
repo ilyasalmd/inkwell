@@ -61,6 +61,8 @@ final class PagesController: NSObject, UIScrollViewDelegate {
     private var shownPageID: UUID?
     private var restored = false
     private var baking = false
+    private var settleLink: CADisplayLink?
+    private var settleStart: CFTimeInterval = 0
     private var resetToken = 0
 
     init(store: LibraryStore, model: EditorModel) {
@@ -292,6 +294,8 @@ final class PagesController: NSObject, UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { container }
 
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+        settleLink?.invalidate()
+        settleLink = nil
         for cell in cells.values { cell.prepareForZoom() }
     }
 
@@ -302,22 +306,48 @@ final class PagesController: NSObject, UIScrollViewDelegate {
     }
 
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        bake()
+        bakeWhenSettled()
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !baking else { return }
+        if scrollView.isZooming || scrollView.isZoomBouncing { centreWhileZooming() }
         updateVisible()
         // Only your own scrolling changes the current page; layout passes (rotation, closing the notebook) and page
         // strip jumps move the offset too, and must not overwrite where you were.
         if scrollView.isDragging || scrollView.isDecelerating || scrollView.isZooming { trackCurrentPage() }
     }
 
-    /// While a pinch takes the pages below 100%, keep them centred instead of sliding to the left edge.
+    /// While a pinch takes the pages below 100%, keep them centred on screen instead of sliding sideways with the
+    /// fingers (the pinch moves the scroll offset even when the pages are narrower than the screen).
     private func centreWhileZooming() {
         let w = container.frame.width, bw = scrollView.bounds.width
-        let x = w < bw ? bw / 2 : w / 2
+        let x = w < bw ? scrollView.contentOffset.x + bw / 2 : w / 2
         if abs(container.center.x - x) > 0.5 { container.center.x = x }
+    }
+
+    /// A pinch past 100% or 600% springs back after you let go. Folding the zoom into the layout before that spring
+    /// has finished cuts it short and the page jumps, so wait for it.
+    private func bakeWhenSettled() {
+        settleLink?.invalidate()
+        settleLink = nil
+        guard !isSettled else { return bake() }
+        settleStart = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(settleTick))
+        link.add(to: .main, forMode: .common)
+        settleLink = link
+    }
+
+    @objc private func settleTick() {
+        guard isSettled || CACurrentMediaTime() - settleStart > 1 else { return }
+        settleLink?.invalidate()
+        settleLink = nil
+        bake()
+    }
+
+    private var isSettled: Bool {
+        !scrollView.isZooming && !scrollView.isZoomBouncing
+            && (container.layer.animationKeys() ?? []).isEmpty && (scrollView.layer.animationKeys() ?? []).isEmpty
     }
 
     /// Folds the live pinch into the layout: same picture on screen, now rendered at the new size.
@@ -393,6 +423,11 @@ final class PageCell: UIView {
     private var delegateRef: InkCanvas.Coordinator?
     private var canvasRect: CGRect = .null
     private var snapshotJob = 0
+    /// A still picture of the ink shown on top while PencilKit redraws after the canvas moved or changed scale.
+    private var freeze: UIView?
+    private var freezeJob = 0
+    /// True from the start of a pinch until it is folded into the layout (the page picture is needed meanwhile).
+    private var snapshotPending = false
 
     init(page: PageInfo, pdfURL: URL?, store: LibraryStore, model: EditorModel) {
         self.page = page
@@ -415,6 +450,9 @@ final class PageCell: UIView {
 
         underlay.contentMode = .scaleToFill
         card.addSubview(underlay)
+        // The paper is laid out once at its logical size and scaled to fit, so a zoom or resize only changes its
+        // transform: tiles already drawn stay valid and nothing has to be redrawn when a pinch ends.
+        tiles.bounds = CGRect(x: 0, y: 0, width: PageMetrics.width, height: PageMetrics.width * page.heightRatio)
         card.addSubview(tiles)
         snapshot.contentMode = .scaleToFill
         snapshot.isHidden = true
@@ -429,18 +467,21 @@ final class PageCell: UIView {
 
     func setFrame(_ f: CGRect) {
         guard frame != f else { return }
+        let scale = bounds.width > 0 ? f.width / bounds.width : 1
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        if bounds.width > 0 { freezeInk(scaledBy: scale) }
         frame = f
         let b = CGRect(origin: .zero, size: f.size)
         card.frame = b
         underlay.frame = b
-        tiles.frame = b
+        let s = f.width / PageMetrics.width
+        tiles.transform = CGAffineTransform(scaleX: s, y: s)
+        tiles.center = CGPoint(x: b.midX, y: b.midY)
         snapshot.frame = b
         snapshotMask.frame = b
         layer.shadowPath = UIBezierPath(roundedRect: b, cornerRadius: 6).cgPath
         CATransaction.commit()
-        tiles.setNeedsDisplay()
         canvasRect = .null   // the canvas must be re-fitted at the new scale
     }
 
@@ -457,6 +498,7 @@ final class PageCell: UIView {
         v.overrideUserInterfaceStyle = page.paper.isDark && page.pdfIndex == nil ? .dark : .light
         v.drawing = store.drawing(for: page.id)
         let d = InkCanvas.Coordinator(pageID: page.id, store: store, model: model)
+        d.onRendered = { [weak self] in self?.thaw() }
         d.scribble = ScribbleWatcher(drawing: v.drawing)
         d.snapper = ShapeSnapWatcher(drawing: v.drawing)
         v.delegate = d
@@ -482,6 +524,7 @@ final class PageCell: UIView {
         let needed = page.intersection(visible.insetBy(dx: -visible.width * 0.25, dy: -visible.height * 0.25))
         if !canvasRect.isNull, needed.isNull || canvasRect.contains(needed) { return }
         if delegateRef?.inUse == true { return }   // never move the canvas mid-stroke
+        if !canvasRect.isNull { freezeInk(scaledBy: 1) }
 
         var target = page.intersection(visible.insetBy(dx: -visible.width, dy: -visible.height)).integral
         if target.isNull || target.isEmpty { target = CGRect(x: 0, y: 0, width: min(page.width, 1), height: min(page.height, 1)) }
@@ -498,12 +541,51 @@ final class PageCell: UIView {
         v.contentOffset = target.origin
         canvasRect = target
         updateSnapshotMask()
+        if freeze != nil {
+            freezeJob += 1
+            let job = freezeJob
+            // In case PencilKit has nothing new to draw and never reports finishing.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                if self?.freezeJob == job { self?.thaw() }
+            }
+        }
+    }
+
+    /// Covers the live canvas with a still picture of its ink, scaled with the page, until PencilKit has redrawn.
+    private func freezeInk(scaledBy scale: CGFloat) {
+        if let freeze {
+            // Already frozen (two changes in a row): keep the picture, just follow the page.
+            let f = freeze.frame
+            freeze.frame = CGRect(x: f.minX * scale, y: f.minY * scale, width: f.width * scale, height: f.height * scale)
+            return
+        }
+        guard let v = canvas, !v.drawing.strokes.isEmpty, v.bounds.width > 0,
+              let still = v.snapshotView(afterScreenUpdates: false) else { return }
+        let f = v.frame
+        still.frame = CGRect(x: f.minX * scale, y: f.minY * scale, width: f.width * scale, height: f.height * scale)
+        still.isUserInteractionEnabled = false
+        card.addSubview(still)
+        freeze = still
+    }
+
+    /// PencilKit has redrawn the ink at its new size: drop the stand-ins.
+    private func thaw() {
+        guard let still = freeze else { return }
+        freezeJob += 1
+        freeze = nil
+        still.removeFromSuperview()
+        if snapshotPending == false {
+            snapshot.isHidden = true
+            snapshot.image = nil
+        }
+        updateSnapshotMask()
     }
 
     // MARK: Zoom support
 
     /// Ink outside the live canvas would vanish while zooming out, so show a picture of the page's ink there.
     func prepareForZoom() {
+        snapshotPending = true
         guard let v = canvas, !canvasRect.contains(bounds) else { return }
         let drawing = v.drawing
         guard !drawing.strokes.isEmpty else { return }
@@ -528,15 +610,20 @@ final class PageCell: UIView {
     func didBake(visible: CGRect) {
         fitCanvas(to: visible)
         snapshotJob += 1
-        snapshot.isHidden = true
-        snapshot.image = nil
+        snapshotPending = false
+        // Ink outside the old canvas is only in the page picture; keep it until the canvas has redrawn there.
+        if freeze == nil {
+            snapshot.isHidden = true
+            snapshot.image = nil
+        }
     }
 
     private func updateSnapshotMask() {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         let path = UIBezierPath(rect: bounds)
-        if !canvasRect.isNull { path.append(UIBezierPath(rect: canvasRect)) }
+        let hole = freeze?.frame ?? canvasRect
+        if !hole.isNull { path.append(UIBezierPath(rect: hole)) }
         snapshotMask.path = path.cgPath
         CATransaction.commit()
     }
