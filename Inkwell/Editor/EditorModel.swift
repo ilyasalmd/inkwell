@@ -196,8 +196,13 @@ final class EditorModel {
         }
     }
 
-    func undo() { activeCanvas?.undoManager?.undo() }
-    func redo() { activeCanvas?.undoManager?.redo() }
+    /// The window's undo history, which PencilKit's ink and added pages share. Works before anything is drawn.
+    var undoManager: UndoManager? {
+        activeCanvas?.undoManager ?? UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first { $0.isKeyWindow }?.undoManager
+    }
+    func undo() { undoManager?.undo() }
+    func redo() { undoManager?.redo() }
 
     func handle(_ action: PencilAction, at point: CGPoint?) {
         switch action {

@@ -28,7 +28,7 @@ struct SettingsView: View {
                                     Button { withAnimation(.snappy) { settings.themeID = t } } label: {
                                         VStack(spacing: 6) {
                                             ZStack {
-                                                RoundedRectangle(cornerRadius: 12).fill(t.theme.background)
+                                                RoundedRectangle(cornerRadius: 12).fill(t.theme(dark: settings.darkTone).background)
                                                 Circle().fill(t.theme.accent).frame(width: 22, height: 22)
                                             }
                                             .frame(width: 64, height: 48)
@@ -42,6 +42,26 @@ struct SettingsView: View {
                             }
                             .padding(.vertical, 4).padding(.horizontal, 4)
                         }
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Dark mode background").font(.subheadline)
+                        HStack(spacing: 18) {
+                            ForEach(DarkTone.allCases) { tone in
+                                Button { withAnimation(.snappy) { settings.darkTone = tone } } label: {
+                                    VStack(spacing: 6) {
+                                        Circle().fill(tone == .tinted ? settings.themeID.theme(dark: .tinted).background : tone.swatch)
+                                            .environment(\.colorScheme, .dark)
+                                            .frame(width: 40, height: 40)
+                                            .overlay(Circle().stroke(Color.primary.opacity(0.25), lineWidth: 1))
+                                            .overlay(Circle().stroke(Color.accentColor, lineWidth: settings.darkTone == tone ? 3 : 0).padding(-4))
+                                        Text(tone.title).font(.caption)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(settings.darkTone == tone ? .isSelected : [])
+                            }
+                        }
+                        .padding(.vertical, 4).padding(.horizontal, 4)
                     }
                 }
 

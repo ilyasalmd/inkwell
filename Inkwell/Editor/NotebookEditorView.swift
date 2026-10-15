@@ -174,6 +174,7 @@ struct NotebookEditorView: View {
         .onAppear {
             tabs.add(notebookID)
             updatePalmGuard()
+            store.undoManager = { [weak model] in model?.undoManager }
         }
         .onChange(of: settings.palmRejection) { _, _ in updatePalmGuard() }
         .onChange(of: settings.palmSensitivity) { _, _ in updatePalmGuard() }

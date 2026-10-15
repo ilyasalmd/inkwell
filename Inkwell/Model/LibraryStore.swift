@@ -444,7 +444,29 @@ final class LibraryStore {
         n.modifiedAt = Date()
         nodes[notebookID] = n
         save()
+        registerPageUndo(page, at: index, in: notebookID)
         return page.id
+    }
+
+    /// The editor's undo history (shared with the ink), so Undo can take back an added page.
+    @ObservationIgnored var undoManager: () -> UndoManager? = { nil }
+
+    private func registerPageUndo(_ page: PageInfo, at index: Int, in notebookID: UUID) {
+        guard let um = undoManager() else { return }
+        um.registerUndo(withTarget: self) { store in
+            store.deletePage(page.id, in: notebookID)
+            // Registered while undoing, so this becomes the redo.
+            um.registerUndo(withTarget: store) { store in
+                guard var n = store.nodes[notebookID], !n.pages.contains(where: { $0.id == page.id }) else { return }
+                let at = min(index, n.pages.count)
+                n.pages.insert(page, at: at)
+                store.nodes[notebookID] = n
+                store.save()
+                store.registerPageUndo(page, at: at, in: notebookID)
+            }
+            um.setActionName("Add Page")
+        }
+        um.setActionName("Add Page")
     }
 
     func deletePage(_ pageID: UUID, in notebookID: UUID) {

@@ -264,6 +264,14 @@ final class PagesController: NSObject, UIScrollViewDelegate {
             shownPageID = target
             if config.currentPageID != target { config.currentPageID = target }
             scroll(to: target, animated: false)
+            // The first pass can run before the pages have their full height, which clamps the scroll short. Try
+            // again once layout settles, then report the page really on screen so "add page" goes under it.
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.scroll(to: target, animated: false)
+                self.shownPageID = nil
+                self.trackCurrentPage()
+            }
         }
         restored = true
         updateVisible()

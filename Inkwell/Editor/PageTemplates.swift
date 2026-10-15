@@ -164,7 +164,8 @@ struct TemplatePicker: View {
 
 /// Goodnotes-style "add page" panel: every template as a live thumbnail, plus paper colour.
 struct AddPagePanel: View {
-    var startPaper: PaperColor
+    /// Read when the panel opens, not when the toolbar builds it, so it matches the page on screen.
+    var startPaper: () -> PaperColor
     var onAdd: (PageTemplate?, PaperColor) -> Void
     @State private var paper: PaperColor
     @AppStorage("inkwell.recentTemplates") private var recentRaw = ""
@@ -181,10 +182,10 @@ struct AddPagePanel: View {
         dismiss()
     }
 
-    init(startPaper: PaperColor, onAdd: @escaping (PageTemplate?, PaperColor) -> Void) {
+    init(startPaper: @autoclosure @escaping () -> PaperColor, onAdd: @escaping (PageTemplate?, PaperColor) -> Void) {
         self.startPaper = startPaper
         self.onAdd = onAdd
-        _paper = State(initialValue: startPaper)
+        _paper = State(initialValue: startPaper())
     }
 
     var body: some View {
@@ -232,7 +233,7 @@ struct AddPagePanel: View {
                 }
             }
             Button {
-                onAdd(nil, startPaper)
+                onAdd(nil, startPaper())
                 dismiss()
             } label: {
                 Label("Same as this page", systemImage: "plus.square.on.square").frame(maxWidth: .infinity)
@@ -241,5 +242,6 @@ struct AddPagePanel: View {
         }
         .padding(20)
         .frame(width: 340)
+        .onAppear { paper = startPaper() }
     }
 }

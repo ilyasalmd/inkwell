@@ -47,6 +47,54 @@ enum ThemeID: String, CaseIterable, Identifiable {
     }
 }
 
+/// What dark mode's backgrounds are made of. The theme's accent colour stays either way.
+enum DarkTone: String, CaseIterable, Identifiable {
+    case black, grey, navy, tinted
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .black: return "Black"
+        case .grey: return "Grey"
+        case .navy: return "Navy"
+        case .tinted: return "Theme tint"
+        }
+    }
+    /// Background, surface and sidebar in dark mode; nil keeps the theme's own tinted darks.
+    var hexes: (background: UInt32, surface: UInt32, sidebar: UInt32)? {
+        switch self {
+        case .black: return (0x000000, 0x161616, 0x0B0B0B)
+        case .grey: return (0x1C1C1E, 0x2C2C2E, 0x232325)
+        case .navy: return (0x0F1626, 0x1A2336, 0x131B2D)
+        case .tinted: return nil
+        }
+    }
+    /// For the swatch in Settings.
+    var swatch: Color { Color(hex: hexes?.background ?? 0x171619) }
+}
+
+extension ThemeID {
+    private var lightHexes: (background: UInt32, surface: UInt32, sidebar: UInt32) {
+        switch self {
+        case .vermilion: return (0xF5EFE3, 0xFFFCF5, 0xECE4D3)
+        case .marine: return (0xEDF1F5, 0xFAFCFF, 0xE0E7EF)
+        case .moss: return (0xEFF1E7, 0xFBFCF6, 0xE2E6D6)
+        case .plum: return (0xF3EBF0, 0xFFFAFD, 0xE8DCE4)
+        case .graphite: return (0xF2F2EF, 0xFFFFFF, 0xE6E6E2)
+        }
+    }
+
+    func theme(dark tone: DarkTone) -> InkTheme {
+        var t = theme
+        guard let d = tone.hexes else { return t }
+        let l = lightHexes
+        t.background = Color(light: l.background, dark: d.background)
+        t.surface = Color(light: l.surface, dark: d.surface)
+        t.sidebar = Color(light: l.sidebar, dark: d.sidebar)
+        return t
+    }
+}
+
 private struct InkThemeKey: EnvironmentKey {
     static let defaultValue = ThemeID.vermilion.theme
 }
@@ -93,6 +141,7 @@ final class AppSettings {
 
     var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "appearance") } }
     var themeID: ThemeID { didSet { defaults.set(themeID.rawValue, forKey: "themeID") } }
+    var darkTone: DarkTone { didSet { defaults.set(darkTone.rawValue, forKey: "darkTone") } }
     var notificationsEnabled: Bool { didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled") } }
     var iCloudEnabled: Bool { didSet { defaults.set(iCloudEnabled, forKey: "iCloudEnabled") } }
     var squeezeAction: PencilAction { didSet { defaults.set(squeezeAction.rawValue, forKey: "squeezeAction") } }
@@ -112,12 +161,13 @@ final class AppSettings {
         drawWithFinger ? .anyInput : .pencilOnly
     }
 
-    var theme: InkTheme { themeID.theme }
+    var theme: InkTheme { themeID.theme(dark: darkTone) }
 
     init() {
         let d = UserDefaults.standard
         appearance = AppearanceMode(rawValue: d.string(forKey: "appearance") ?? "") ?? .system
         themeID = ThemeID(rawValue: d.string(forKey: "themeID") ?? "") ?? .vermilion
+        darkTone = DarkTone(rawValue: d.string(forKey: "darkTone") ?? "") ?? .black
         notificationsEnabled = d.object(forKey: "notificationsEnabled") as? Bool ?? true
         iCloudEnabled = d.bool(forKey: "iCloudEnabled")
         squeezeAction = PencilAction(rawValue: d.string(forKey: "squeezeAction") ?? "") ?? .quickPalette
