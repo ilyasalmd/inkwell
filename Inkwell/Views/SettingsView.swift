@@ -70,7 +70,7 @@ struct SettingsView: View {
                     Text("iCloud sync isn't part of the open download. Notebooks are stored on this device. To enable sync, build Inkwell from source with your own developer team.")
                     #else
                     Text(store.usingICloud
-                         ? "Your notebooks, ink and imported PDFs are stored in iCloud Drive and sync between your devices. \"Share with Claude\" keeps page images in iCloud Drive for the Inkwell plugin on your Mac. Nothing leaves your own iCloud."
+                         ? "Your notebooks, ink and imported PDFs are stored in iCloud Drive and sync between your devices. \"Share with Claude\" keeps page images in iCloud Drive for the Inkwell plugin on your Mac, and hands each page straight to your Mac over Wi-Fi when they're on the same network. Nothing leaves your own devices and iCloud."
                          : "Notebooks are stored on this device only. Turn on iCloud sync to share pages with Claude.")
                     #endif
                 }

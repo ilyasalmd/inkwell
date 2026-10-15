@@ -4,14 +4,27 @@
 Inkwell on your iPad keeps page images and an index in your iCloud Drive
 (Settings > Share with Claude on my Mac). This server reads them from the Mac's copy of that folder and
 hands them to Claude, so you can ask "what am I working on?" without taking a screenshot.
+
+Direct link: while this server runs it also listens on your local network (advertised over Bonjour as
+_inkwell._tcp), so when the iPad is on the same Wi-Fi it hands each page over the moment you pause instead of
+waiting for iCloud. The iPad proves it's yours with a key it keeps in that same iCloud folder (link.json), so
+nothing else on the network can write here. Pages that arrive this way are kept in LIVE; whichever copy is newer
+wins.
 """
+import atexit
 import base64
 import glob
+import hmac
 import json
 import os
+import re
+import signal
+import socket
 import subprocess
 import sys
+import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PROTOCOL = "2024-11-05"
 CANDIDATES = [
@@ -30,6 +43,15 @@ def folder():
     return CANDIDATES[0]
 
 
+LIVE = os.environ.get("INKWELL_LIVE") or os.path.expanduser("~/Library/Application Support/Inkwell/Live")
+
+
+def newest(rel):
+    """The newer of the directly-sent copy and the iCloud copy of a file, if either exists."""
+    found = [p for p in (os.path.join(LIVE, rel), os.path.join(folder(), rel)) if os.path.exists(p)]
+    return max(found, key=os.path.getmtime) if found else None
+
+
 def ensure_local(path):
     """iCloud may keep a file as a placeholder until asked; ask, then wait briefly."""
     if os.path.exists(path):
@@ -46,7 +68,10 @@ def ensure_local(path):
 
 
 def load_index():
+    live = os.path.join(LIVE, "index.json")
     path = os.path.join(folder(), "index.json")
+    if os.path.exists(live) and (not os.path.exists(path) or read_json(live).get("updated", "") >= read_json(path).get("updated", "")):
+        return read_json(live)
     if not ensure_local(path):
         raise RuntimeError(
             "No Inkwell pages found yet. On the iPad open Inkwell > Settings, turn on iCloud sync and "
@@ -54,6 +79,14 @@ def load_index():
         )
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def read_json(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 def find_notebook(index, query):
@@ -74,7 +107,8 @@ def find_notebook(index, query):
 
 
 def page_image(page_id):
-    path = os.path.join(folder(), "pages", page_id + ".png")
+    rel = os.path.join("pages", page_id + ".png")
+    path = newest(rel) or os.path.join(folder(), rel)
     if not ensure_local(path):
         return None
     with open(path, "rb") as f:
@@ -218,6 +252,66 @@ TOOLS = {
 }
 
 
+# ---------- direct link from the iPad ----------
+
+ALLOWED = re.compile(r"^/(index\.json|pages/[0-9A-Fa-f-]{36}\.png)$")
+MAX_BYTES = 40 * 1024 * 1024
+
+
+def link_key():
+    """The key the iPad writes into the iCloud folder; only your own devices can read it."""
+    path = os.path.join(folder(), "link.json")
+    if not os.path.exists(path):
+        try:
+            subprocess.run(["brctl", "download", path], timeout=3, capture_output=True)
+        except Exception:
+            pass
+    return read_json(path).get("key") or ""
+
+
+class LinkHandler(BaseHTTPRequestHandler):
+    def do_PUT(self):
+        key = link_key()
+        if not key or not hmac.compare_digest(self.headers.get("X-Inkwell-Key", ""), key):
+            return self.finish_with(403)
+        if not ALLOWED.match(self.path):
+            return self.finish_with(404)
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0 or length > MAX_BYTES:
+            return self.finish_with(413)
+        data = self.rfile.read(length)
+        target = os.path.join(LIVE, self.path.lstrip("/"))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        tmp = target + ".part"
+        with open(tmp, "wb") as f:
+            f.write(data)
+        os.replace(tmp, target)
+        self.finish_with(204)
+
+    def finish_with(self, code):
+        self.send_response(code)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, *_args):  # stdout carries MCP messages; keep quiet
+        pass
+
+
+def start_link():
+    try:
+        server = ThreadingHTTPServer(("", 0), LinkHandler)
+    except OSError:
+        return
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    name = "Inkwell on " + socket.gethostname().split(".")[0]
+    try:
+        advert = subprocess.Popen(["dns-sd", "-R", name, "_inkwell._tcp", "local", str(server.server_address[1])],
+                                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        return
+    atexit.register(advert.terminate)
+
+
 # ---------- JSON-RPC over stdio ----------
 
 def reply(msg_id, result=None, error=None):
@@ -262,6 +356,8 @@ def handle(msg):
 
 
 def main():
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # so the Bonjour advert stops with the server
+    start_link()
     for line in sys.stdin:
         line = line.strip()
         if not line:
