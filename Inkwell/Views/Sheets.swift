@@ -155,7 +155,7 @@ struct NewNotebookSheet: View {
             Label("Folder", systemImage: "folder").foregroundStyle(.secondary)
             Spacer()
             Picker("Folder", selection: $destination) {
-                Text("No Folder").tag(UUID?.none)
+                Text("Library").tag(UUID?.none)
                 ForEach(store.flatFolders(), id: \.node.id) { item in
                     Text(String(repeating: "   ", count: item.depth) + item.node.name).tag(UUID?.some(item.node.id))
                 }
@@ -189,7 +189,7 @@ struct FolderPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                row(title: "No Folder", symbol: "tray", tint: .secondary, depth: 0, id: nil)
+                row(title: "Library", symbol: "books.vertical", tint: .secondary, depth: 0, id: nil)
                 ForEach(store.flatFolders(excluding: excluding), id: \.node.id) { item in
                     row(title: item.node.name, symbol: "folder.fill", tint: item.node.tint.color, depth: item.depth + 1, id: item.node.id)
                 }

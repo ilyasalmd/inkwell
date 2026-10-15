@@ -50,7 +50,7 @@ struct FolderBrowser: View {
     }
 
     private var title: String {
-        folderID == nil ? "No Folder" : (store.node(folderID)?.name ?? "No Folder")
+        folderID == nil ? "Library" : (store.node(folderID)?.name ?? "Library")
     }
 
     private var items: [Node] {
@@ -58,16 +58,15 @@ struct FolderBrowser: View {
         if !q.isEmpty {
             return LibraryStore.sorted(store.nodes.values.filter { $0.name.localizedCaseInsensitiveContains(q) }, by: sort)
         }
-        // The top level is "No Folder": only loose notebooks. Folders live in the sidebar.
-        let base = store.children(of: folderID).filter { folderID != nil || !$0.isFolder }
-        return LibraryStore.sorted(base, by: sort)
+        // Folders first, then notebooks; subfolders show up inside their folder.
+        return LibraryStore.sorted(store.children(of: folderID), by: sort)
     }
 
     var body: some View {
         Group {
             if items.isEmpty {
                 ContentUnavailableView {
-                    Label(search.isEmpty ? (folderID == nil ? "No loose notebooks" : "This folder is empty") : "No results",
+                    Label(search.isEmpty ? (folderID == nil ? "No notebooks yet" : "This folder is empty") : "No results",
                           systemImage: search.isEmpty ? "tray" : "magnifyingglass")
                 } description: {
                     Text(search.isEmpty
@@ -85,7 +84,7 @@ struct FolderBrowser: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search notes")
         .toolbar { toolbar }
-        .safeAreaInset(edge: .bottom) { if folderID != nil, store.path(to: folderID).count > 1 { PathBar(folderID: folderID, navigate: navigate) } }
+        .safeAreaInset(edge: .bottom) { if folderID != nil { PathBar(folderID: folderID, navigate: navigate) } }
         .sheet(isPresented: $showNewNotebook) {
             NewNotebookSheet(parent: folderID) { open($0) }
         }
@@ -124,8 +123,8 @@ struct FolderBrowser: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            if let id = folderID, let parent = store.node(id)?.parentID {
-                Button { navigate(.folder(parent)) } label: { Image(systemName: "chevron.up") }
+            if let id = folderID {
+                Button { navigate(store.node(id)?.parentID.map { .folder($0) } ?? .library) } label: { Image(systemName: "chevron.up") }
                     .accessibilityLabel("Enclosing folder")
             }
             Picker("View", selection: $viewMode) {
@@ -226,7 +225,7 @@ struct FolderBrowser: View {
                     Text(node.modifiedAt.formatted(date: .abbreviated, time: .shortened))
                         .frame(width: 170, alignment: .leading)
                         .foregroundStyle(.secondary)
-                    Text(node.isFolder ? "\(store.itemCount(in: node.id)) items" : "Notebook")
+                    Text(node.isFolder ? "Folder" : "Notebook")
                         .frame(width: 90, alignment: .leading)
                         .foregroundStyle(.secondary)
                 }
@@ -353,8 +352,9 @@ struct PathBar: View {
     var body: some View {
         let crumbs = store.path(to: folderID)
         HStack(spacing: 6) {
-            ForEach(Array(crumbs.enumerated()), id: \.element.id) { i, n in
-                if i > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary) }
+            crumb(title: "Library", symbol: "books.vertical.fill", tint: .secondary, dest: nil)
+            ForEach(Array(crumbs.enumerated()), id: \.element.id) { _, n in
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                 crumb(title: n.name, symbol: "folder.fill", tint: n.tint.color, dest: n.id)
             }
             Spacer()

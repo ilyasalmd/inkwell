@@ -177,85 +177,24 @@ struct SidebarView: View {
     @Binding var showSettings: Bool
     @Environment(LibraryStore.self) private var store
     @Environment(\.inkTheme) private var theme
-    @State private var folderAlert: FolderAlert?
-    @State private var folderName = ""
-    @State private var customiseID: UUID?
-    @State private var deleteTarget: Node?
-
-    private enum FolderAlert: Identifiable {
-        case new(parent: UUID?), rename(UUID)
-        var id: String {
-            switch self {
-            case .new(let p): return "new-\(p?.uuidString ?? "root")"
-            case .rename(let i): return "rename-\(i)"
-            }
-        }
-    }
 
     var body: some View {
-        List(selection: $selection) {
+        // Folders and subfolders live in the library screen itself; while you're inside one, Library stays highlighted.
+        List(selection: Binding(get: { if case .folder? = selection { return .library } else { return selection } },
+                                set: { selection = $0 })) {
             Section {
-                Label("No Folder", systemImage: "tray")
+                Label("Library", systemImage: "books.vertical")
                     .font(.callout)
                     .tag(SidebarItem.library)
                     .dropDestination(for: NodeRef.self) { items, _ in
                         items.map { store.move($0.id, to: nil) }.contains(true)
                     }
             }
-            Section {
-                OutlineGroup(store.folderTree(), children: \.children) { tree in
-                    Label {
-                        Text(tree.node.name)
-                    } icon: {
-                        Image(systemName: tree.node.cover?.symbol ?? "folder.fill").foregroundStyle(tree.node.displayColor)
-                    }
-                    .font(.callout)
-                    .tag(SidebarItem.folder(tree.id))
-                    .dropDestination(for: NodeRef.self) { items, _ in
-                        items.map { store.move($0.id, to: tree.id) }.contains(true)
-                    }
-                    .contextMenu {
-                        Button("Rename", systemImage: "pencil") { folderName = tree.node.name; folderAlert = .rename(tree.id) }
-                        Button("New Subfolder", systemImage: "folder.badge.plus") { folderName = ""; folderAlert = .new(parent: tree.id) }
-                        Button("Customise…", systemImage: "paintbrush.pointed") { customiseID = tree.id }
-                        Divider()
-                        Button("Delete", systemImage: "trash", role: .destructive) { deleteTarget = tree.node }
-                    }
-                }
-            } header: {
-                HStack {
-                    Text("Folders")
-                    Spacer()
-                    Button { folderName = ""; folderAlert = .new(parent: nil) } label: {
-                        Image(systemName: "folder.badge.plus").font(.callout)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
-                    .accessibilityLabel("New folder")
-                }
-            }
             Section("Automate") {
                 row("Import", "square.and.arrow.down.fill", .importer)
                 row("Schedules", "calendar.badge.clock", .schedules)
                 row("Suggested", "sparkles", .suggestions)
             }
-        }
-        .alert(folderAlertTitle, isPresented: Binding(get: { folderAlert != nil }, set: { if !$0 { folderAlert = nil } })) {
-            TextField("Folder name", text: $folderName)
-            Button(folderAlertButton) { commitFolderAlert() }
-            Button("Cancel", role: .cancel) {}
-        }
-        .alert("Delete “\(deleteTarget?.name ?? "")”?", isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } })) {
-            Button("Delete", role: .destructive) {
-                if let t = deleteTarget {
-                    store.delete(t.id)
-                    if case .folder(let sel)? = selection, store.node(sel) == nil { selection = .library }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Everything inside it will be deleted too.") }
-        .sheet(item: Binding(get: { customiseID.map { IDBox(id: $0) } }, set: { customiseID = $0?.id })) { box in
-            CustomiseSheet(nodeID: box.id)
         }
         .environment(\.defaultMinListRowHeight, 34)
         .listStyle(.sidebar)
@@ -271,32 +210,6 @@ struct SidebarView: View {
             }
             .buttonStyle(.plain)
             .background(theme.sidebar)
-        }
-    }
-
-    private var folderAlertTitle: String {
-        switch folderAlert {
-        case .rename: return "Rename folder"
-        case .new(let p): return p == nil ? "New folder" : "New subfolder"
-        case nil: return ""
-        }
-    }
-
-    private var folderAlertButton: String {
-        if case .rename = folderAlert { return "Save" }
-        return "Create"
-    }
-
-    private func commitFolderAlert() {
-        switch folderAlert {
-        case .rename(let id):
-            store.rename(id, to: folderName)
-        case .new(let parent):
-            let name = folderName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let f = store.createFolder(name: name.isEmpty ? "New Folder" : name, in: parent)
-            selection = .folder(f.id)
-        case nil:
-            break
         }
     }
 

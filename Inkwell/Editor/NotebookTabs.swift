@@ -86,7 +86,7 @@ struct OpenNotebookSheet: View {
                     Label {
                         VStack(alignment: .leading) {
                             Text(node.name)
-                            Text(store.path(to: node.parentID).map(\.name).joined(separator: " › ").ifEmpty("No Folder"))
+                            Text(store.path(to: node.parentID).map(\.name).joined(separator: " › ").ifEmpty("Library"))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     } icon: {
