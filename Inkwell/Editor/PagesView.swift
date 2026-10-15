@@ -97,7 +97,7 @@ final class PagesController: NSObject, UIScrollViewDelegate {
         container.addSubview(addButton)
 
         let gapHold = UILongPressGestureRecognizer(target: self, action: #selector(gapHeld(_:)))
-        gapHold.minimumPressDuration = 0.5
+        gapHold.minimumPressDuration = 1
         gapHold.delegate = self
         scrollView.addGestureRecognizer(gapHold)
     }
@@ -409,11 +409,13 @@ final class PagesController: NSObject, UIScrollViewDelegate {
         config?.onInsertPage(position)
     }
 
-    /// Which gap between pages a point is in, as the position a new page would take there.
+    /// Which gap between pages a point is in, as the position a new page would take there. Only the half away from
+    /// the writing hand counts (the left half for right-handers), so a resting palm never adds a page.
     fileprivate func gapPosition(at p: CGPoint) -> Int? {
         guard !pages.isEmpty, !baseFrames.isEmpty else { return nil }
         let first = frame(0)
         guard p.x > first.minX - 24, p.x < first.maxX + 24 else { return nil }
+        if PalmGuard.shared.leftHanded ? p.x < first.midX : p.x > first.midX { return nil }
         for i in 0..<min(pages.count, baseFrames.count) {
             let top = i == 0 ? first.minY - Self.pageGap * zoom : frame(i - 1).maxY
             if p.y >= top, p.y < frame(i).minY { return i }
