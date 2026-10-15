@@ -68,6 +68,8 @@ struct NewNotebookSheet: View {
             .onChange(of: mode) { _, new in
                 if new == .whiteboard && !template.suitsWhiteboard { template = .dotted }
             }
+            .onAppear { matchFolder() }
+            .onChange(of: destination) { matchFolder() }
             .navigationTitle("New Notebook")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -165,6 +167,18 @@ struct NewNotebookSheet: View {
         .padding(.horizontal, 16).padding(.vertical, 6)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
         .frame(maxWidth: 420)
+    }
+
+    /// In a folder that already has notebooks, a new one starts out like the first notebook made there (cover,
+    /// pages and type). Everything can still be changed here or later.
+    private func matchFolder() {
+        guard let first = store.styleNotebook(in: destination) else { return }
+        mode = first.isWhiteboard ? .whiteboard : .pages
+        if let page = first.pages.first {
+            template = page.template
+            paper = page.paper
+        }
+        design = first.coverDesign
     }
 
     private func create() {

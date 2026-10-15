@@ -235,7 +235,7 @@ struct AddPagePanel: View {
                 onAdd(nil, startPaper)
                 dismiss()
             } label: {
-                Label("Same as last page", systemImage: "plus.square.on.square").frame(maxWidth: .infinity)
+                Label("Same as this page", systemImage: "plus.square.on.square").frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
         }

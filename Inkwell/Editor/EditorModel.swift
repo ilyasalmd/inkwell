@@ -51,7 +51,7 @@ struct ColorPalette: Identifiable {
     let colors: [UInt32]
 
     static let all: [ColorPalette] = [
-        ColorPalette(id: "Ink", colors: [0x1B1B1F, 0x4B5563, 0x1E3A8A, 0x2563EB, 0x0D9488, 0x15803D, 0xDC2626, 0x7C3AED]),
+        ColorPalette(id: "Ink", colors: [0x1B1B1F, 0xFFFFFF, 0x4B5563, 0x1E3A8A, 0x2563EB, 0x0D9488, 0x15803D, 0xDC2626, 0x7C3AED]),
         ColorPalette(id: "Pastel", colors: [0xFFB3C1, 0xFFD6A5, 0xFDFFB6, 0xCAFFBF, 0x9BF6FF, 0xA0C4FF, 0xBDB2FF, 0xFFC6FF]),
         ColorPalette(id: "Vivid", colors: [0xFF3B30, 0xFF9500, 0xFFCC00, 0x34C759, 0x00C7BE, 0x007AFF, 0xAF52DE, 0xFF2D95]),
         ColorPalette(id: "Earth", colors: [0x5C4033, 0x8B5E3C, 0xC08552, 0xA3B18A, 0x588157, 0x3A5A40, 0x6D597A, 0xB56576])
@@ -89,7 +89,8 @@ struct ToolSpec: Equatable {
     var eraser: EraserMode = .pixel
     var eraserSize: CGFloat = 0.3   // 0...1, pixel eraser only
 
-    func makeTool() -> PKTool {
+    /// `style` is how the canvas draws ink. A dark canvas swaps colours, so the colour is swapped back first.
+    func makeTool(for style: UIUserInterfaceStyle = .light) -> PKTool {
         switch kind {
         case .eraser:
             return eraser == .pixel ? PKEraserTool(.fixedWidthBitmap, width: EraserSize.width(eraserSize)) : PKEraserTool(.vector)
@@ -99,7 +100,8 @@ struct ToolSpec: Equatable {
             let ink = kind.ink ?? .pen
             let range = ink.validWidthRange
             let w = range.lowerBound + (range.upperBound - range.lowerBound) * width
-            return PKInkingTool(ink, color: color, width: w)
+            let shown = style == .dark ? PKInkingTool.convertColor(color, from: .dark, to: .light) : color
+            return PKInkingTool(ink, color: shown, width: w)
         }
     }
 }

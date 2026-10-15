@@ -46,7 +46,7 @@ struct PageThumb: View {
             guard !drawing.strokes.isEmpty else { ink = nil; return }
             let rect = CGRect(x: 0, y: 0, width: PageMetrics.width, height: PageMetrics.width * page.heightRatio)
             var image: UIImage?
-            UITraitCollection(userInterfaceStyle: page.paper.isDark ? .dark : .light).performAsCurrent {
+            UITraitCollection(userInterfaceStyle: page.inkStyle).performAsCurrent {
                 image = drawing.image(from: rect, scale: 0.3)
             }
             ink = image
@@ -64,6 +64,8 @@ struct PageStrip: View {
     var jump: (UUID) -> Void
     @Environment(LibraryStore.self) private var store
     @State private var showAdd = false
+
+    private var current: PageInfo? { notebook.pages.first { $0.id == currentPageID } ?? notebook.pages.last }
 
     var body: some View {
         ScrollView {
@@ -83,8 +85,11 @@ struct PageStrip: View {
                             return true
                         }
                         .contextMenu {
-                            Button("Insert page after", systemImage: "plus.square.on.square") {
-                                withAnimation(.snappy) { store.addPage(to: notebook.id, after: page.id) }
+                            Button("Insert page above", systemImage: "arrow.up.doc") {
+                                withAnimation(.snappy) { store.addPage(to: notebook.id, at: i) }
+                            }
+                            Button("Insert page below", systemImage: "arrow.down.doc") {
+                                withAnimation(.snappy) { store.addPage(to: notebook.id, at: i + 1) }
                             }
                             Button("Delete page", systemImage: "trash", role: .destructive) {
                                 withAnimation(.snappy) { store.deletePage(page.id, in: notebook.id) }
@@ -99,8 +104,12 @@ struct PageStrip: View {
                         .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .popover(isPresented: $showAdd) {
-                    AddPagePanel(startPaper: notebook.pages.last?.paper ?? .white) { t, paper in
-                        withAnimation(.snappy) { store.addPage(to: notebook.id, template: t, paper: paper) }
+                    AddPagePanel(startPaper: current?.paper ?? .white) { t, paper in
+                        // Goes straight under the page you're on, and shows it.
+                        let id = withAnimation(.snappy) {
+                            store.addPage(to: notebook.id, template: t, paper: paper, after: current?.id)
+                        }
+                        if let id { jump(id) }
                     }
                     .presentationCompactAdaptation(.popover)
                 }

@@ -284,9 +284,17 @@ final class LibraryStore {
     // MARK: Create
 
     @discardableResult
-    func createFolder(name: String, in parent: UUID?, tint: NodeTint = .ink, cover: CoverDesign? = nil) -> Node {
-        var n = Node(name: uniqueName(name, in: parent), kind: .folder, parentID: parent, tint: tint)
+    /// Without a colour, a folder inside another folder takes on that folder's colour.
+    func createFolder(name: String, in parent: UUID?, tint: NodeTint? = nil, cover: CoverDesign? = nil) -> Node {
+        let outer = parent.flatMap { nodes[$0] }
+        var n = Node(name: uniqueName(name, in: parent), kind: .folder, parentID: parent, tint: tint ?? outer?.tint ?? .ink)
         n.cover = cover
+        if tint == nil, cover == nil, let outerCover = outer?.cover {
+            var c = CoverDesign.from(tint: n.tint)
+            c.primary = outerCover.primary
+            c.secondary = outerCover.secondary
+            n.cover = c
+        }
         nodes[n.id] = n
         save()
         return n
@@ -304,6 +312,21 @@ final class LibraryStore {
         nodes[n.id] = n
         save()
         return n
+    }
+
+    /// The first notebook made in this folder, or in the nearest folder above it that has one. New notebooks
+    /// there start with its look.
+    func styleNotebook(in folderID: UUID?) -> Node? {
+        var current = folderID
+        var seen = Set<UUID>()
+        while let id = current, seen.insert(id).inserted {
+            let first = nodes.values
+                .filter { $0.parentID == id && !$0.isFolder && $0.pdfFile == nil }
+                .min { $0.createdAt < $1.createdAt }
+            if let first { return first }
+            current = nodes[id]?.parentID
+        }
+        return nil
     }
 
     // MARK: Edit
@@ -400,17 +423,28 @@ final class LibraryStore {
 
     // MARK: Pages & drawings
 
-    /// Adds a page at the end, or right after `afterPageID` when given.
-    func addPage(to notebookID: UUID, template: PageTemplate? = nil, paper: PaperColor? = nil, after afterPageID: UUID? = nil) {
-        guard var n = nodes[notebookID], !n.isWhiteboard else { return }
-        let anchor = afterPageID.flatMap { id in n.pages.firstIndex { $0.id == id } }
-        let reference = anchor.map { n.pages[$0] } ?? n.pages.last
+    /// Adds a page at the end, right after `afterPageID`, or at `position` (0 is before the first page). A new page
+    /// takes the template and paper of the page above it (or below it, at the very top). Returns the new page's id.
+    @discardableResult
+    func addPage(to notebookID: UUID, template: PageTemplate? = nil, paper: PaperColor? = nil,
+                 after afterPageID: UUID? = nil, at position: Int? = nil) -> UUID? {
+        guard var n = nodes[notebookID], !n.isWhiteboard else { return nil }
+        let index: Int
+        if let position {
+            index = min(max(position, 0), n.pages.count)
+        } else if let anchor = afterPageID.flatMap({ id in n.pages.firstIndex { $0.id == id } }) {
+            index = anchor + 1
+        } else {
+            index = n.pages.count
+        }
+        let reference = index > 0 ? n.pages[index - 1] : n.pages.first
         let page = PageInfo(template: template ?? reference?.template ?? .blank,
                             paper: paper ?? reference?.paper ?? .white)
-        if let anchor { n.pages.insert(page, at: anchor + 1) } else { n.pages.append(page) }
+        n.pages.insert(page, at: index)
         n.modifiedAt = Date()
         nodes[notebookID] = n
         save()
+        return page.id
     }
 
     func deletePage(_ pageID: UUID, in notebookID: UUID) {
@@ -433,6 +467,8 @@ final class LibraryStore {
     func setStyle(notebookID: UUID, pageID: UUID?, template: PageTemplate, paper: PaperColor) {
         guard var n = nodes[notebookID] else { return }
         for i in n.pages.indices where pageID == nil || n.pages[i].id == pageID {
+            // Old ink on light paper already holds its real colours, so it stays true when the paper turns dark.
+            if n.pages[i].inkStyle == .light { n.pages[i].trueInk = true }
             n.pages[i].template = template
             n.pages[i].paper = paper
         }

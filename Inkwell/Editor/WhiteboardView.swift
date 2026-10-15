@@ -12,7 +12,7 @@ struct BoardCanvas: UIViewRepresentable {
     static let extent: CGFloat = 20000
 
     let pageID: UUID
-    let paper: PaperColor
+    let inkStyle: UIUserInterfaceStyle
     let spec: ToolSpec
     let policy: PKCanvasViewDrawingPolicy
     let store: LibraryStore
@@ -59,9 +59,9 @@ struct BoardCanvas: UIViewRepresentable {
     }
 
     private func apply(to v: PKCanvasView) {
-        v.overrideUserInterfaceStyle = paper.isDark ? .dark : .light
+        v.overrideUserInterfaceStyle = inkStyle
         v.drawingPolicy = policy
-        v.tool = spec.makeTool()
+        v.tool = spec.makeTool(for: inkStyle)
         v.keepMenusForPencil(policy == .pencilOnly)
     }
 
@@ -176,7 +176,7 @@ struct WhiteboardView: View {
     var body: some View {
         ZStack {
             BoardGrid(template: page.template, paper: page.paper, viewport: viewport)
-            BoardCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
+            BoardCanvas(pageID: page.id, inkStyle: page.inkStyle, spec: model.spec,
                         policy: settings.drawingPolicy, store: store, model: model,
                         viewport: $viewport)
         }

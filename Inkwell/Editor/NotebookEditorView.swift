@@ -110,6 +110,11 @@ struct NotebookEditorView: View {
     @Environment(\.inkTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @State private var currentPageID: UUID?
+
+    /// The page on screen (the last page until the notebook has reported one).
+    private func currentPage(_ notebook: Node) -> PageInfo? {
+        notebook.pages.first { $0.id == currentPageID } ?? notebook.pages.last
+    }
     @State private var showPages = false
     @State private var showStyle = false
     @State private var showAddPage = false
@@ -289,8 +294,11 @@ struct NotebookEditorView: View {
             } else {
                 Button { showAddPage = true } label: { Image(systemName: "doc.badge.plus") }
                     .popover(isPresented: $showAddPage) {
-                        AddPagePanel(startPaper: notebook.pages.last?.paper ?? .white) { t, paper in
-                            store.addPage(to: notebookID, template: t, paper: paper)
+                        AddPagePanel(startPaper: currentPage(notebook)?.paper ?? .white) { t, paper in
+                            // Goes straight under the page you're on, and shows it.
+                            if let id = store.addPage(to: notebookID, template: t, paper: paper, after: currentPage(notebook)?.id) {
+                                currentPageID = id
+                            }
                         }
                         .presentationCompactAdaptation(.popover)
                     }
@@ -375,6 +383,11 @@ struct NotebookPane: View {
                          onZoom: { zoom = $0 },
                          onAddPage: {
                              withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { store.addPage(to: notebookID) }
+                         },
+                         onInsertPage: { position in
+                             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                 store.addPage(to: notebookID, at: position)
+                             }
                          })
             .overlay(alignment: .topTrailing) {
                 if zoom > 1.01 {

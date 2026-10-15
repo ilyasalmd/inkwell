@@ -21,6 +21,8 @@ struct PagesView: UIViewRepresentable {
     let model: EditorModel
     var onZoom: (CGFloat) -> Void
     var onAddPage: () -> Void
+    /// Hold in the gap between two pages: insert a page at that position (0 is above the first page).
+    var onInsertPage: (Int) -> Void
 
     func makeCoordinator() -> PagesController { PagesController(store: store, model: model) }
 
@@ -93,6 +95,11 @@ final class PagesController: NSObject, UIScrollViewDelegate {
         hold.minimumPressDuration = 0.6
         addButton.addGestureRecognizer(hold)
         container.addSubview(addButton)
+
+        let gapHold = UILongPressGestureRecognizer(target: self, action: #selector(gapHeld(_:)))
+        gapHold.minimumPressDuration = 0.5
+        gapHold.delegate = self
+        scrollView.addGestureRecognizer(gapHold)
     }
 
     // MARK: Updates from SwiftUI
@@ -395,6 +402,31 @@ final class PagesController: NSObject, UIScrollViewDelegate {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         config?.onAddPage()
     }
+
+    @objc private func gapHeld(_ g: UILongPressGestureRecognizer) {
+        guard g.state == .began, let position = gapPosition(at: g.location(in: container)) else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        config?.onInsertPage(position)
+    }
+
+    /// Which gap between pages a point is in, as the position a new page would take there.
+    fileprivate func gapPosition(at p: CGPoint) -> Int? {
+        guard !pages.isEmpty, !baseFrames.isEmpty else { return nil }
+        let first = frame(0)
+        guard p.x > first.minX - 24, p.x < first.maxX + 24 else { return nil }
+        for i in 0..<min(pages.count, baseFrames.count) {
+            let top = i == 0 ? first.minY - Self.pageGap * zoom : frame(i - 1).maxY
+            if p.y >= top, p.y < frame(i).minY { return i }
+        }
+        return nil
+    }
+}
+
+extension PagesController: UIGestureRecognizerDelegate {
+    /// The gap hold only starts between pages, so it never takes a touch from the ink.
+    func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+        gapPosition(at: g.location(in: container)) != nil
+    }
 }
 
 /// Reports layout passes so the controller can react to size changes (rotation, split view, side-by-side panes).
@@ -495,7 +527,7 @@ final class PageCell: UIView {
         v.contentInsetAdjustmentBehavior = .never
         v.showsVerticalScrollIndicator = false
         v.showsHorizontalScrollIndicator = false
-        v.overrideUserInterfaceStyle = page.paper.isDark && page.pdfIndex == nil ? .dark : .light
+        v.overrideUserInterfaceStyle = page.inkStyle
         v.drawing = store.drawing(for: page.id)
         let d = InkCanvas.Coordinator(pageID: page.id, store: store, model: model)
         d.onRendered = { [weak self] in self?.thaw() }
@@ -510,7 +542,7 @@ final class PageCell: UIView {
     func apply(spec: ToolSpec, policy: PKCanvasViewDrawingPolicy) {
         guard let v = canvas else { return }
         v.drawingPolicy = policy
-        v.tool = spec.makeTool()
+        v.tool = spec.makeTool(for: page.inkStyle)
         v.keepMenusForPencil(policy == .pencilOnly)
         // PencilKit builds its selection gestures lazily; catch them once they exist.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak v] in v?.keepMenusForPencil(policy == .pencilOnly) }

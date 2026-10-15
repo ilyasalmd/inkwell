@@ -100,6 +100,13 @@ struct PageInfo: Codable, Identifiable, Hashable {
     var pdfIndex: Int?
     /// Height ÷ width. Defaults to A4 for template pages; PDF pages keep their own shape.
     var aspect: Double?
+    /// Ink shows exactly the colour it was drawn in. Pages saved before build 13 decode as nil: on dark paper their
+    /// ink keeps being drawn with dark-mode colour swapping (black shows as white), so it looks as it always did,
+    /// and new ink there is pre-swapped (`ToolSpec.makeTool(for:)`) so it comes out in the colour picked.
+    var trueInk: Bool? = true
+
+    /// How PencilKit should draw this page's ink.
+    var inkStyle: UIUserInterfaceStyle { paper.isDark && pdfIndex == nil && trueInk != true ? .dark : .light }
 
     var heightRatio: CGFloat { CGFloat(aspect ?? Double(PageMetrics.height / PageMetrics.width)) }
 }

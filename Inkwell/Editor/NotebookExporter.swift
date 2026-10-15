@@ -40,14 +40,14 @@ enum NotebookExporter {
             return UIGraphicsImageRenderer(bounds: rect, format: fmt).image { ctx in
                 UIColor(page.paper.color).setFill()
                 ctx.cgContext.fill(rect)
-                drawInk(drawing, paper: page.paper, logical: area, into: rect, scale: fit)
+                drawInk(drawing, style: page.inkStyle, logical: area, into: rect, scale: fit)
             }.pngData()
         }
         let rect = CGRect(x: 0, y: 0, width: width, height: width * page.heightRatio)
         let source = notebook.pdfFile.flatMap { PDFDocument(url: store.storage.readImport($0)) }
         return UIGraphicsImageRenderer(bounds: rect, format: fmt).image { ctx in
             drawBackground(page, in: rect, source: source, cg: ctx.cgContext)
-            drawInk(store.drawing(for: page.id), paper: page.paper,
+            drawInk(store.drawing(for: page.id), style: page.inkStyle,
                     logical: CGRect(x: 0, y: 0, width: PageMetrics.width, height: PageMetrics.width * page.heightRatio),
                     into: rect, scale: width / PageMetrics.width)
         }.pngData()
@@ -72,7 +72,7 @@ enum NotebookExporter {
                 let rect = CGRect(x: 0, y: 0, width: pageWidth, height: pageWidth * page.heightRatio)
                 ctx.beginPage(withBounds: rect, pageInfo: [:])
                 drawBackground(page, in: rect, source: source, cg: ctx.cgContext)
-                drawInk(store.drawing(for: page.id), paper: page.paper,
+                drawInk(store.drawing(for: page.id), style: page.inkStyle,
                         logical: CGRect(x: 0, y: 0, width: PageMetrics.width, height: PageMetrics.width * page.heightRatio),
                         into: rect)
             }
@@ -103,10 +103,10 @@ enum NotebookExporter {
         image.uiImage?.draw(in: rect)
     }
 
-    private static func drawInk(_ drawing: PKDrawing, paper: PaperColor, logical: CGRect, into rect: CGRect, scale: CGFloat = 2) {
+    private static func drawInk(_ drawing: PKDrawing, style: UIUserInterfaceStyle, logical: CGRect, into rect: CGRect, scale: CGFloat = 2) {
         guard !drawing.strokes.isEmpty else { return }
         var image: UIImage?
-        UITraitCollection(userInterfaceStyle: paper.isDark ? .dark : .light).performAsCurrent {
+        UITraitCollection(userInterfaceStyle: style).performAsCurrent {
             image = drawing.image(from: logical, scale: scale)
         }
         image?.draw(in: rect)
@@ -134,7 +134,7 @@ enum NotebookExporter {
             cg.translateBy(x: -area.minX, y: -area.minY)
             drawBoardGrid(template: page.template, paper: page.paper, area: area, cg: cg)
             cg.restoreGState()
-            drawInk(drawing, paper: page.paper, logical: area, into: pageRect,
+            drawInk(drawing, style: page.inkStyle, logical: area, into: pageRect,
                     scale: min(2, 5000 / max(area.width, area.height)))
         }
     }
