@@ -14,6 +14,7 @@
 		27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3D55E0940961AF9BC2BBFC /* EditorModel.swift */; };
 		27A8E257058CE109332F1096 /* LibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA29C0A3F753405E6DFFD2A6 /* LibraryStore.swift */; };
 		2BCB2CDBDA7480EE977189CA /* CoverDesigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086E657AF5037A457F83726C /* CoverDesigner.swift */; };
+		336A0937D962DFB9BE2D740D /* PagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7C68F98BE38E50546887552 /* PagesView.swift */; };
 		38A91FB7CE58DADEB01F44C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5D6894C5C06E2B64CC0F7B8C /* Assets.xcassets */; };
 		3DFAC7731A21ECD424550B6B /* LibraryStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 640C25A16ACEE95EE5476A05 /* LibraryStorage.swift */; };
 		3F30A4A71ED1FEC61D2EC9DB /* NotebookTabs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D5E2E41BB2EC05602F1468 /* NotebookTabs.swift */; };
@@ -69,6 +70,7 @@
 		A52C2B95A34C0382F1F69D2D /* ScribbleEraser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScribbleEraser.swift; sourceTree = "<group>"; };
 		AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmGuard.swift; sourceTree = "<group>"; };
+		B7C68F98BE38E50546887552 /* PagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagesView.swift; sourceTree = "<group>"; };
 		BC2888BD8FB11B1955B7236E /* NotebookExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookExporter.swift; sourceTree = "<group>"; };
 		BECF27EABD512571A720D1C0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BFF35DC20345334E3C67BCD3 /* Inkwell.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Inkwell.entitlements; sourceTree = "<group>"; };
@@ -113,6 +115,7 @@
 				BC2888BD8FB11B1955B7236E /* NotebookExporter.swift */,
 				08D5E2E41BB2EC05602F1468 /* NotebookTabs.swift */,
 				10E6E50E2B5C85CD2CADBC9D /* PageStrip.swift */,
+				B7C68F98BE38E50546887552 /* PagesView.swift */,
 				FBC53F8073945E96608C960C /* PageTemplates.swift */,
 				AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */,
 				E6904DBEAEB4CBBFD21D6412 /* PenDock.swift */,
@@ -267,6 +270,7 @@
 				A3FDC87642292C881475CC4C /* PDFImport.swift in Sources */,
 				44CCC00336A188E81430CD5E /* PageStrip.swift in Sources */,
 				E9522376AFE69F4FD871F651 /* PageTemplates.swift in Sources */,
+				336A0937D962DFB9BE2D740D /* PagesView.swift in Sources */,
 				DFF5717813AE2AB4BB7D8782 /* PalmGuard.swift in Sources */,
 				A87412D9A9DB5A794EF34DB2 /* PenDock.swift in Sources */,
 				443D455D1BF305C4DCC379CF /* RootView.swift in Sources */,
@@ -346,7 +350,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -411,7 +415,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -498,7 +502,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

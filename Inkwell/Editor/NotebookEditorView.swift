@@ -45,6 +45,8 @@ struct InkCanvas: UIViewRepresentable {
         let model: EditorModel
         var scribble: ScribbleWatcher?
         var snapper: ShapeSnapWatcher?
+        /// True while the pencil (or finger) is mid-stroke, so the page view doesn't move the canvas under it.
+        private(set) var inUse = false
 
         init(pageID: UUID, store: LibraryStore, model: EditorModel) {
             self.pageID = pageID
@@ -65,10 +67,12 @@ struct InkCanvas: UIViewRepresentable {
 
         func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
             model.activeCanvas = canvasView
+            inUse = true
             PalmGuard.shared.pencilBegan()
         }
 
         func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+            inUse = false
             PalmGuard.shared.pencilEnded()
         }
     }
@@ -325,7 +329,7 @@ struct NotebookEditorView: View {
 
 // MARK: - Pane
 
-/// One notebook's pages in a scroll view with pinch zoom. The editor shows one, or two side by side.
+/// One notebook's pages with pinch zoom. The editor shows one, or two side by side.
 struct NotebookPane: View {
     let notebookID: UUID
     @Binding var currentPageID: UUID?
@@ -334,14 +338,7 @@ struct NotebookPane: View {
     @Environment(AppSettings.self) private var settings
     @Environment(EditorModel.self) private var model
     @State private var zoom: CGFloat = 1
-    /// Live pinch: the view is scaled on the GPU while the fingers move, and the pages re-laid out once at the end.
-    @State private var pinch: CGFloat = 1
-    @State private var pinchAnchor: UnitPoint = .center
-    @State private var bridge = PageScrollBridge()
-    /// The page the scroll view is showing; only a different `currentPageID` (from the page strip) scrolls it.
-    @State private var shownPageID: UUID?
-    /// Page tracking waits until the last-open page has been scrolled to, so it can't overwrite it with page 1.
-    @State private var restored = false
+    @State private var resetZoom = 0
 
     var body: some View {
         if let notebook = store.node(notebookID) {
@@ -349,7 +346,7 @@ struct NotebookPane: View {
                 if notebook.isWhiteboard, let page = notebook.pages.first {
                     WhiteboardView(page: page, model: model)
                 } else {
-                    GeometryReader { geo in pagesScroll(notebook, width: geo.size.width) }
+                    pages(notebook)
                 }
             }
             .onChange(of: currentPageID) { _, id in
@@ -360,83 +357,22 @@ struct NotebookPane: View {
         }
     }
 
-    private func pagesScroll(_ notebook: Node, width: CGFloat) -> some View {
-        let available = max(width - 48, 200)
-        let baseWidth = min(available, PageMetrics.width * 1.15)
-        let pageWidth = baseWidth * zoom
+    private func pages(_ notebook: Node) -> some View {
         let atTop = settings.dockAtTop
-        let topPadding: CGFloat = atTop ? (settings.dockCollapsed ? 80 : 150) : 20
-        let spacing = 28 * zoom
-        return ScrollViewReader { proxy in
-            ScrollView(zoom > 1.01 ? [.vertical, .horizontal] : .vertical) {
-                LazyVStack(spacing: spacing) {
-                    ForEach(notebook.pages) { page in
-                        pageView(page, in: notebook, width: pageWidth)
-                    }
-                    addPageButton
-                    .padding(.bottom, atTop ? 40 : (settings.dockCollapsed ? 80 : 150))
-                }
-                .scrollTargetLayout()
-                .frame(minWidth: width)
-                .padding(.top, topPadding)
-                .background(ScrollViewProbe { sv in bridge.attach(sv) })
-            }
-            // Which page you're on comes from the scroll offset rather than .scrollPosition, which would snap the view to
-            // the top of that page after every zoom.
-            .onScrollGeometryChange(for: Int.self) { geo in
-                let probe = geo.visibleRect.minY + geo.visibleRect.height * 0.3
-                var y = topPadding
-                for (i, page) in notebook.pages.enumerated() {
-                    y += pageWidth * page.heightRatio + spacing
-                    if probe < y { return i }
-                }
-                return max(notebook.pages.count - 1, 0)
-            } action: { _, index in
-                guard restored, notebook.pages.indices.contains(index) else { return }
-                let id = notebook.pages[index].id
-                shownPageID = id
-                if currentPageID != id { currentPageID = id }
-            }
-            .onChange(of: currentPageID) { _, id in
-                guard let id, id != shownPageID else { return }
-                shownPageID = id
-                proxy.scrollTo(id, anchor: .top)
-            }
-            .onAppear {
-                let last = LastPage.get(notebookID).flatMap { id in notebook.pages.contains { $0.id == id } ? id : nil }
-                guard let target = currentPageID ?? last, target != notebook.pages.first?.id else {
-                    restored = true
-                    return
-                }
-                shownPageID = target
-                currentPageID = target
-                DispatchQueue.main.async {
-                    proxy.scrollTo(target, anchor: .top)
-                    DispatchQueue.main.async { restored = true }
-                }
-            }
-            .scaleEffect(pinch, anchor: pinchAnchor)
-            .clipped()
-            .simultaneousGesture(
-                MagnifyGesture()
-                    .onChanged { value in
-                        if pinch == 1 { pinchAnchor = value.startAnchor }
-                        pinch = min(max(zoom * value.magnification, 1), 4) / zoom
-                    }
-                    .onEnded { value in
-                        let target = min(max(zoom * value.magnification, 1), 4)
-                        var t = Transaction()
-                        t.disablesAnimations = true
-                        withTransaction(t) {
-                            pinch = 1
-                            setZoom(target, base: baseWidth, anchor: value.startLocation, top: topPadding)
-                        }
-                    }
-            )
+        return PagesView(notebook: notebook, currentPageID: $currentPageID, spec: model.spec,
+                         policy: settings.drawingPolicy,
+                         topInset: atTop ? (settings.dockCollapsed ? 80 : 150) : 20,
+                         bottomInset: atTop ? 40 : (settings.dockCollapsed ? 80 : 150),
+                         palmRejection: settings.palmRejection, resetZoom: resetZoom,
+                         store: store, model: model,
+                         onZoom: { zoom = $0 },
+                         onAddPage: {
+                             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { store.addPage(to: notebookID) }
+                         })
             .overlay(alignment: .topTrailing) {
                 if zoom > 1.01 {
                     Button {
-                        setZoom(1, base: baseWidth, anchor: bridge.visibleCentre, top: topPadding)
+                        resetZoom += 1
                     } label: {
                         Label("\(Int((zoom * 100).rounded()))%", systemImage: "arrow.down.right.and.arrow.up.left")
                             .font(.footnote.weight(.semibold))
@@ -448,54 +384,6 @@ struct NotebookPane: View {
                     .transition(.opacity)
                 }
             }
-        }
-    }
-
-    /// Changes the zoom and scrolls so the spot between your fingers stays put.
-    private func setZoom(_ new: CGFloat, base: CGFloat, anchor: CGPoint, top: CGFloat) {
-        let old = zoom
-        guard abs(new - old) > 0.001 else { return }
-        let before = bridge.offset
-        zoom = new
-        DispatchQueue.main.async {
-            bridge.keepAnchored(from: before, oldPage: base * old, newPage: base * new, anchor: anchor, top: top)
-        }
-    }
-
-    /// With palm rejection on, adding a page from the bottom of the notebook takes a deliberate press-and-hold,
-    /// so a resting palm can't trigger it.
-    private var addPageButton: some View {
-        let add = { withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { store.addPage(to: notebookID) } }
-        let label = Label(settings.palmRejection ? "Hold to add page" : "Add page", systemImage: "plus")
-            .padding(.horizontal, 18).padding(.vertical, 10)
-            .background(Color.accentColor.opacity(0.14), in: Capsule())
-        return Group {
-            if settings.palmRejection {
-                label.contentShape(Capsule()).onLongPressGesture(minimumDuration: 0.6) { add() }
-            } else {
-                Button(action: add) { label }
-            }
-        }
-        .accessibilityLabel("Add page")
-        .accessibilityAddTraits(.isButton)
-    }
-
-    @ViewBuilder
-    private func pageView(_ page: PageInfo, in notebook: Node, width: CGFloat) -> some View {
-        ScaledPage(width: width, aspect: page.heightRatio) {
-            ZStack {
-                if let idx = page.pdfIndex, let file = notebook.pdfFile {
-                    PDFPageBackground(file: file, index: idx, aspect: page.heightRatio)
-                } else {
-                    TemplateBackground(template: page.template, paper: page.paper)
-                }
-                InkCanvas(pageID: page.id, paper: page.paper, spec: model.spec,
-                          policy: settings.drawingPolicy, store: store, model: model)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
-        .id(page.id)
     }
 }
 
