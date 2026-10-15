@@ -38,6 +38,7 @@
 		C310946CAD698164800BD281 /* CoverItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */; };
 		C5673DE986508E99E0E268C6 /* LinkedFoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091A1EF79277D7BEC3972207 /* LinkedFoldersView.swift */; };
 		C9D335E13AF36DF5FE6AA39B /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B5325E16D78BD1D65BAC6AD /* NotificationService.swift */; };
+		D571213C9F471784402D8BD0 /* TrashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75D06F2DC501FFACF108B3B1 /* TrashView.swift */; };
 		D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4EF23ED67A533F7DC85AD8 /* Sheets.swift */; };
 		DFF5717813AE2AB4BB7D8782 /* PalmGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3C3A8E5F01C1824B2DEA28 /* PalmGuard.swift */; };
 		E9522376AFE69F4FD871F651 /* PageTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC53F8073945E96608C960C /* PageTemplates.swift */; };
@@ -64,6 +65,7 @@
 		6A8F726FD7CFAF809EB189D8 /* CoverSketchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverSketchView.swift; sourceTree = "<group>"; };
 		6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverItems.swift; sourceTree = "<group>"; };
 		6D427D7F7137A13FF8698F5E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		75D06F2DC501FFACF108B3B1 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
 		8BF0F87DFA05723D41225178 /* InkwellOpen.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = InkwellOpen.entitlements; sourceTree = "<group>"; };
 		8C402D55B865C0DECA46263A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArrangeView.swift; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 				065AD49135FCEC5038603E9B /* SchedulesView.swift */,
 				BECF27EABD512571A720D1C0 /* SettingsView.swift */,
 				CF4EF23ED67A533F7DC85AD8 /* Sheets.swift */,
+				75D06F2DC501FFACF108B3B1 /* TrashView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -283,6 +286,7 @@
 				F7D88505695EE574D8C8EBCB /* SettingsView.swift in Sources */,
 				0317DA8ED8BFE428F6D817C1 /* ShapeSnap.swift in Sources */,
 				D5D7AC6819072E480C8E22AD /* Sheets.swift in Sources */,
+				D571213C9F471784402D8BD0 /* TrashView.swift in Sources */,
 				04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -354,7 +358,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -419,7 +423,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -506,7 +510,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

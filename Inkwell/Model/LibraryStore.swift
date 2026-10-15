@@ -132,7 +132,9 @@ final class LibraryStore {
 
     /// Switches between this device's storage and the iCloud Drive container. Returns false if iCloud is unavailable.
     @discardableResult
-    func setICloud(_ enabled: Bool) async -> Bool {
+    /// `bringLocal` copies this device's notebooks across; only do that when the user switches sync on. At launch
+    /// the local folder still holds notebooks that were since deleted in iCloud, and copying would bring them back.
+    func setICloud(_ enabled: Bool, bringLocal: Bool = true) async -> Bool {
         flush()
         if enabled {
             let root = await Task.detached { LibraryStorage.iCloudRoot() }.value
@@ -141,7 +143,9 @@ final class LibraryStore {
                 return false
             }
             let cloud = LibraryStorage(root: root, isCloud: true)
-            await Task.detached { [storage] in LibraryStorage.copyContents(from: storage, to: cloud) }.value
+            if bringLocal {
+                await Task.detached { [storage] in LibraryStorage.copyContents(from: storage, to: cloud) }.value
+            }
             storage = cloud
             usingICloud = true
             reload()
@@ -212,8 +216,22 @@ final class LibraryStore {
 
     func node(_ id: UUID?) -> Node? { id.flatMap { nodes[$0] } }
 
+    /// Items in a folder, leaving out anything in the Trash.
     func children(of parent: UUID?) -> [Node] {
-        nodes.values.filter { $0.parentID == parent }
+        nodes.values.filter { $0.parentID == parent && $0.trashedAt == nil }
+    }
+
+    /// Every item that isn't in the Trash, either itself or inside a trashed folder.
+    var liveNodes: [Node] { nodes.values.filter { !inTrash($0.id) } }
+
+    func inTrash(_ id: UUID) -> Bool {
+        var current: UUID? = id
+        var seen = Set<UUID>()
+        while let c = current, seen.insert(c).inserted, let n = nodes[c] {
+            if n.trashedAt != nil { return true }
+            current = n.parentID
+        }
+        return false
     }
 
     func sortedChildren(of parent: UUID?, by sort: SortOption) -> [Node] {
@@ -320,8 +338,8 @@ final class LibraryStore {
         var current = folderID
         var seen = Set<UUID>()
         while let id = current, seen.insert(id).inserted {
-            let first = nodes.values
-                .filter { $0.parentID == id && !$0.isFolder && $0.pdfFile == nil }
+            let first = children(of: id)
+                .filter { !$0.isFolder && $0.pdfFile == nil }
                 .min { $0.createdAt < $1.createdAt }
             if let first { return first }
             current = nodes[id]?.parentID
@@ -363,11 +381,42 @@ final class LibraryStore {
         return true
     }
 
+    // MARK: Trash
+
+    /// Things in the Trash, most recently thrown away first.
+    var trashed: [Node] {
+        nodes.values.filter { $0.trashedAt != nil }.sorted { $0.trashedAt! > $1.trashedAt! }
+    }
+
+    func trash(_ id: UUID) {
+        guard nodes[id] != nil, nodes[id]?.trashedAt == nil else { return }
+        nodes[id]?.trashedAt = Date()
+        save()
+    }
+
+    /// Puts an item back where it came from, or in the Library if that folder is gone or also in the Trash.
+    func restore(_ id: UUID) {
+        guard var n = nodes[id] else { return }
+        n.trashedAt = nil
+        if let p = n.parentID, nodes[p] == nil || inTrash(p) { n.parentID = nil }
+        n.name = uniqueName(n.name, in: n.parentID, ignoring: id)
+        nodes[id] = n
+        save()
+    }
+
+    func emptyTrash() {
+        for n in trashed where nodes[n.id] != nil { delete(n.id) }
+    }
+
+    /// Deletes for good: the item, everything inside it, its ink and imported PDFs.
     func delete(_ id: UUID) {
         var doomed: [UUID] = []
         func collect(_ nid: UUID) {
             doomed.append(nid)
-            children(of: nid).forEach { collect($0.id) }
+            for child in nodes.values where child.parentID == nid {
+                // Something thrown away on its own stays in the Trash, now loose in the Library.
+                if child.trashedAt != nil { nodes[child.id]?.parentID = nil } else { collect(child.id) }
+            }
         }
         collect(id)
         for nid in doomed {
@@ -451,31 +500,42 @@ final class LibraryStore {
     /// The editor's undo history (shared with the ink), so Undo can take back an added page.
     @ObservationIgnored var undoManager: () -> UndoManager? = { nil }
 
+    /// Undo takes the page out again; that delete registers putting it back as the redo.
     private func registerPageUndo(_ page: PageInfo, at index: Int, in notebookID: UUID) {
         guard let um = undoManager() else { return }
-        um.registerUndo(withTarget: self) { store in
-            store.deletePage(page.id, in: notebookID)
-            // Registered while undoing, so this becomes the redo.
-            um.registerUndo(withTarget: store) { store in
-                guard var n = store.nodes[notebookID], !n.pages.contains(where: { $0.id == page.id }) else { return }
-                let at = min(index, n.pages.count)
-                n.pages.insert(page, at: at)
-                store.nodes[notebookID] = n
-                store.save()
-                store.registerPageUndo(page, at: at, in: notebookID)
-            }
-            um.setActionName("Add Page")
-        }
+        um.registerUndo(withTarget: self) { store in store.deletePage(page.id, in: notebookID) }
         um.setActionName("Add Page")
     }
 
+    /// Removes a page and its ink. Undo puts both back where they were.
     func deletePage(_ pageID: UUID, in notebookID: UUID) {
-        guard var n = nodes[notebookID], n.pages.count > 1 else { return }
-        n.pages.removeAll { $0.id == pageID }
+        guard var n = nodes[notebookID], n.pages.count > 1,
+              let index = n.pages.firstIndex(where: { $0.id == pageID }) else { return }
+        let page = n.pages.remove(at: index)
+        let ink = drawingCache[pageID].map { $0.dataRepresentation() } ?? storage.readDrawing(pageID)
+        n.modifiedAt = Date()
         nodes[notebookID] = n
         drawingCache[pageID] = nil
         storage.deleteDrawing(pageID)
         save()
+        if let um = undoManager() {
+            um.registerUndo(withTarget: self) { store in store.putBack(page, ink: ink, at: index, in: notebookID) }
+            um.setActionName("Delete Page")
+        }
+    }
+
+    private func putBack(_ page: PageInfo, ink: Data?, at index: Int, in notebookID: UUID) {
+        guard var n = nodes[notebookID], !n.pages.contains(where: { $0.id == page.id }) else { return }
+        let at = min(index, n.pages.count)
+        n.pages.insert(page, at: at)
+        n.modifiedAt = Date()
+        nodes[notebookID] = n
+        if let ink, !ink.isEmpty {
+            storage.writeDrawing(ink, pageID: page.id)
+            drawingRevision[page.id, default: 0] += 1
+        }
+        save()
+        registerPageUndo(page, at: at, in: notebookID)
     }
 
     func movePages(in notebookID: UUID, from source: IndexSet, to destination: Int) {

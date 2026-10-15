@@ -63,7 +63,7 @@ struct RootView: View {
             notifications.pendingOpenRule = nil
             runSchedules()
             if let rule = store.rules.first(where: { $0.id == ruleID }),
-               let nb = store.nodes.values.filter({ !$0.isFolder && $0.name.localizedCaseInsensitiveContains(rule.title) })
+               let nb = store.liveNodes.filter({ !$0.isFolder && $0.name.localizedCaseInsensitiveContains(rule.title) })
                 .max(by: { $0.createdAt < $1.createdAt }) {
                 path = [NotebookRoute(id: nb.id)]
             }
@@ -118,7 +118,7 @@ struct RootView: View {
     private func startup() async {
         ClaudeBridge.shared.store = store
         if settings.iCloudEnabled {
-            let ok = await store.setICloud(true)
+            let ok = await store.setICloud(true, bringLocal: false)
             if !ok { settings.iCloudEnabled = false }
         }
         runSchedules()

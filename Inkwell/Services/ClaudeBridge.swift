@@ -73,7 +73,7 @@ final class ClaudeBridge {
         syncing?.cancel()
         syncing = Task { [weak self] in
             guard let self, let store = self.store else { return }
-            for node in store.nodes.values where !node.isFolder {
+            for node in store.liveNodes where !node.isFolder {
                 for page in node.pages where !store.drawing(for: page.id).strokes.isEmpty {
                     if Task.isCancelled { return }
                     self.render(page.id)
@@ -108,7 +108,7 @@ final class ClaudeBridge {
         struct Index: Encodable {
             var updated: Date; var lastEditedPage: String?; var lastEditedNotebook: String?; var notebooks: [NotebookEntry]
         }
-        let books = store.nodes.values.filter { !$0.isFolder }.sorted { $0.modifiedAt > $1.modifiedAt }.map { n in
+        let books = store.liveNodes.filter { !$0.isFolder }.sorted { $0.modifiedAt > $1.modifiedAt }.map { n in
             NotebookEntry(id: n.id.uuidString, name: n.name,
                           folder: store.path(to: n.parentID).map(\.name).joined(separator: "/"),
                           whiteboard: n.isWhiteboard, modified: n.modifiedAt,

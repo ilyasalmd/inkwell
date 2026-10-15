@@ -39,7 +39,6 @@ struct FolderBrowser: View {
     @State private var renameText = ""
     @State private var showNewNotebook = false
     @State private var moveTarget: Node?
-    @State private var deleteTarget: Node?
     @State private var customiseTarget: UUID?
     @State private var showImporter = false
     @State private var importNote: String?
@@ -56,7 +55,7 @@ struct FolderBrowser: View {
     private var items: [Node] {
         let q = search.trimmingCharacters(in: .whitespaces)
         if !q.isEmpty {
-            return LibraryStore.sorted(store.nodes.values.filter { $0.name.localizedCaseInsensitiveContains(q) }, by: sort)
+            return LibraryStore.sorted(store.liveNodes.filter { $0.name.localizedCaseInsensitiveContains(q) }, by: sort)
         }
         // Folders first, then notebooks; subfolders show up inside their folder.
         return LibraryStore.sorted(store.children(of: folderID), by: sort)
@@ -80,6 +79,7 @@ struct FolderBrowser: View {
             }
         }
         .background(theme.background)
+        .overlay(alignment: .bottomTrailing) { TrashCan() }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search notes")
@@ -109,12 +109,6 @@ struct FolderBrowser: View {
             TextField("Name", text: $renameText)
             Button("Save") { if let t = renameTarget { store.rename(t.id, to: renameText) } }
             Button("Cancel", role: .cancel) {}
-        }
-        .alert("Delete “\(deleteTarget?.name ?? "")”?", isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } })) {
-            Button("Delete", role: .destructive) { if let t = deleteTarget { store.delete(t.id) } }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(deleteTarget?.isFolder == true ? "Everything inside it will be deleted too." : "This can’t be undone.")
         }
     }
 
@@ -190,7 +184,7 @@ struct FolderBrowser: View {
                         .contentShape(Rectangle())
                         .hoverEffect(.highlight)
                         .modifier(NodeInteractions(node: node, selected: $selected, open: openNode))
-                        .nodeMenu(node, rename: beginRename, move: { moveTarget = $0 }, delete: { deleteTarget = $0 }, open: openNode, customise: { customiseTarget = $0.id })
+                        .nodeMenu(node, rename: beginRename, move: { moveTarget = $0 }, delete: { store.trash($0.id) }, open: openNode, customise: { customiseTarget = $0.id })
                         .transition(.scale(scale: 0.8).combined(with: .opacity))
                     }
                 }
@@ -233,7 +227,7 @@ struct FolderBrowser: View {
                 .contentShape(Rectangle())
                 .listRowBackground(selected == node.id ? Color.accentColor.opacity(0.15) : Color.clear)
                 .modifier(NodeInteractions(node: node, selected: $selected, open: openNode))
-                .nodeMenu(node, rename: beginRename, move: { moveTarget = $0 }, delete: { deleteTarget = $0 }, open: openNode, customise: { customiseTarget = $0.id })
+                .nodeMenu(node, rename: beginRename, move: { moveTarget = $0 }, delete: { store.trash($0.id) }, open: openNode, customise: { customiseTarget = $0.id })
             }
         }
         .listStyle(.plain)
@@ -321,7 +315,7 @@ struct NodeMenu: ViewModifier {
             Button("Move to…", systemImage: "folder") { move(node) }
             Button(node.isFolder ? "Customise…" : "Design cover…", systemImage: "paintbrush.pointed") { customise(node) }
             Divider()
-            Button("Delete", systemImage: "trash", role: .destructive) { delete(node) }
+            Button("Move to Trash", systemImage: "trash", role: .destructive) { delete(node) }
         }
     }
 

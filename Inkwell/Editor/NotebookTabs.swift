@@ -18,7 +18,7 @@ struct TabStrip: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(tabs.open.compactMap { store.node($0) }) { node in
+                ForEach(tabs.open.compactMap { store.node($0) }.filter { !store.inTrash($0.id) }) { node in
                     tab(node)
                 }
                 Button(action: openPicker) {
@@ -73,7 +73,7 @@ struct OpenNotebookSheet: View {
     @State private var query = ""
 
     private var items: [Node] {
-        store.nodes.values
+        store.liveNodes
             .filter { !$0.isFolder && !(excluding ?? Set(tabs.open)).contains($0.id) }
             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
             .sorted { $0.modifiedAt > $1.modifiedAt }

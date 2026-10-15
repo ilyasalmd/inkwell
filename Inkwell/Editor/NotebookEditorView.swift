@@ -173,6 +173,7 @@ struct NotebookEditorView: View {
         .persistentSystemOverlays(.hidden)
         .onAppear {
             tabs.add(notebookID)
+            model.restorePen(for: notebookID)
             updatePalmGuard()
             store.undoManager = { [weak model] in model?.undoManager }
         }

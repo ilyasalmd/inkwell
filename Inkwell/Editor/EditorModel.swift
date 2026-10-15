@@ -108,9 +108,9 @@ struct ToolSpec: Equatable {
 
 @MainActor @Observable
 final class EditorModel {
-    var kind: ToolKind = .fountain
-    var color: UIColor = UIColor(hex: 0x1E3A8A)
-    var width: CGFloat = 0.35
+    var kind: ToolKind = .fountain { didSet { rememberPen() } }
+    var color: UIColor = UIColor(hex: 0x1E3A8A) { didSet { rememberPen() } }
+    var width: CGFloat = 0.35 { didSet { rememberPen() } }
     var paletteIndex = 0
     /// Colours used recently, newest first, kept across launches.
     var recents: [UInt32] = (UserDefaults.standard.array(forKey: "inkwell.recentColors") as? [Int])?.map { UInt32($0) } ?? []
@@ -120,6 +120,9 @@ final class EditorModel {
     @ObservationIgnored var haptic: ((CGPoint?) -> Void)?
     @ObservationIgnored weak var activeCanvas: PKCanvasView?
     @ObservationIgnored weak var boardCanvas: PKCanvasView?
+    /// The notebook being written in, whose pen, colour and thickness are remembered.
+    @ObservationIgnored private var penNotebook: UUID?
+    @ObservationIgnored private var restoringPen = false
 
     var eraserMode: EraserMode = EraserMode(rawValue: UserDefaults.standard.string(forKey: "inkwell.eraserMode") ?? "") ?? .pixel {
         didSet { UserDefaults.standard.set(eraserMode.rawValue, forKey: "inkwell.eraserMode") }
@@ -141,11 +144,38 @@ final class EditorModel {
     }
     var spec: ToolSpec { ToolSpec(kind: kind, color: color, width: width, eraser: eraserMode, eraserSize: eraserSize) }
 
+    static func hex(of c: UIColor) -> UInt32 {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        c.getRed(&r, green: &g, blue: &b, alpha: nil)
+        func byte(_ v: CGFloat) -> UInt32 { UInt32(min(max(v, 0), 1) * 255 + 0.5) }
+        return byte(r) << 16 | byte(g) << 8 | byte(b)
+    }
+
+    /// Brings back the pen, colour and thickness last used in this notebook (or the last used anywhere, for a
+    /// notebook not written in yet), so closing the app doesn't reset the pen.
+    func restorePen(for notebookID: UUID) {
+        penNotebook = notebookID
+        let d = UserDefaults.standard
+        guard let data = d.data(forKey: "inkwell.pen.\(notebookID.uuidString)") ?? d.data(forKey: "inkwell.pen.last"),
+              let pen = try? JSONDecoder().decode(PenStyle.self, from: data) else { return }
+        restoringPen = true
+        defer { restoringPen = false }
+        if let k = ToolKind(rawValue: pen.kind), k.usesColor { kind = k }
+        color = UIColor(hex: pen.hex)
+        width = CGFloat(pen.width)
+    }
+
+    private func rememberPen() {
+        guard !restoringPen, kind.usesColor else { return }
+        let pen = PenStyle(kind: kind.rawValue, hex: Self.hex(of: color), width: Double(width))
+        guard let data = try? JSONEncoder().encode(pen) else { return }
+        UserDefaults.standard.set(data, forKey: "inkwell.pen.last")
+        if let id = penNotebook { UserDefaults.standard.set(data, forKey: "inkwell.pen.\(id.uuidString)") }
+    }
+
     func saveCurrentStyle() {
         guard kind.usesColor else { return }
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-        color.getRed(&r, green: &g, blue: &b, alpha: nil)
-        let hex = UInt32(r * 255 + 0.5) << 16 | UInt32(g * 255 + 0.5) << 8 | UInt32(b * 255 + 0.5)
+        let hex = Self.hex(of: color)
         let style = PenStyle(kind: kind.rawValue, hex: hex, width: Double(width))
         guard !savedStyles.contains(where: { $0.kind == style.kind && $0.hex == hex && abs($0.width - style.width) < 0.01 }) else { return }
         savedStyles = Array((savedStyles + [style]).suffix(8))
@@ -174,9 +204,7 @@ final class EditorModel {
 
     /// Puts a colour at the front of the recent row (no duplicates, at most 8).
     func noteRecent(_ c: UIColor) {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-        c.getRed(&r, green: &g, blue: &b, alpha: nil)
-        let hex = UInt32(r * 255 + 0.5) << 16 | UInt32(g * 255 + 0.5) << 8 | UInt32(b * 255 + 0.5)
+        let hex = Self.hex(of: c)
         recents.removeAll { $0 == hex }
         recents.insert(hex, at: 0)
         recents = Array(recents.prefix(8))

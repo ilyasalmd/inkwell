@@ -132,6 +132,8 @@ struct Node: Identifiable, Codable, Hashable {
     var sourceStamp: Double?
     /// nil means a normal page notebook (also how notebooks saved before whiteboards existed decode).
     var mode: NotebookMode?
+    /// Set while the item sits in the Trash. Anything inside a trashed folder is hidden with it.
+    var trashedAt: Date?
 
     var isWhiteboard: Bool { mode == .whiteboard }
     var isFolder: Bool { kind == .folder }
