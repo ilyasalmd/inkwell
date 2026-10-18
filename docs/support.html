@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell Support</title>
+<meta name="description" content="Help and contact for Inkwell.">
+<style>
+  :root {
+    --bg: #f6f3ec; --ink: #1b2a41; --muted: #5b6676; --card: #ffffff; --line: #e1dccf; --accent: #e9694b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --ink: #eef0f4; --muted: #9aa3b2; --card: #1c2028; --line: #2b313c; --accent: #f17c60; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 ui-serif, Georgia, "Iowan Old Style", serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
+  header { padding: 72px 0 36px; }
+  h1 { font-size: clamp(44px, 9vw, 72px); line-height: 1; margin: 0 0 14px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .lede { font-size: 21px; color: var(--muted); max-width: 34em; margin: 0; }
+  h2 { font-size: 24px; margin: 52px 0 6px; }
+  p, li { color: var(--ink); }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .card h3 { margin: 0 0 4px; font-size: 20px; }
+  .card p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font: 600 16px/1 -apple-system, system-ui, sans-serif; padding: 13px 20px; border-radius: 999px; }
+  a.btn:hover { filter: brightness(1.06); }
+  a.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  ol { padding-left: 1.3em; }
+  li { margin: 8px 0; }
+  code { font: 14px ui-monospace, Menlo, monospace; background: var(--card); border: 1px solid var(--line); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+  .note { border-left: 3px solid var(--accent); padding: 2px 0 2px 16px; color: var(--muted); font-size: 15px; margin: 22px 0; }
+  ul.feat { columns: 2 260px; padding-left: 1.2em; color: var(--muted); }
+  footer { margin-top: 64px; color: var(--muted); font-size: 14px; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ink<span>well</span></h1>
+    <p class="lede">Support. Handwriting notes for iPad and Mac, built around Apple Pencil.</p>
+  </header>
+
+  <h2>Get help</h2>
+  <p>Email <a href="mailto:ilyasdaneshmand@gmail.com">ilyasdaneshmand@gmail.com</a> with what you tapped and what happened, and a screenshot if you can. You can also <a href="https://github.com/ilyasalmd/inkwell/issues">open an issue on GitHub</a>.</p>
+
+  <h2>Common questions</h2>
+  <ol>
+    <li><strong>How do I sync between iPad and Mac?</strong> Turn on iCloud sync in Inkwell’s Settings on each device, signed in to the same Apple Account.</li>
+    <li><strong>I deleted a notebook by mistake.</strong> Tap the bin at the bottom right of the Library to open the Trash, then choose Put Back.</li>
+    <li><strong>Can I bring notes from another app?</strong> Export them as PDF, then share the PDF to Inkwell or import it with the + button. Your writing goes on its own layer above each page.</li>
+    <li><strong>Where are backups?</strong> Inkwell keeps automatic backups of your library and can restore one as a copy from Settings.</li>
+  </ol>
+
+  <h2>Privacy</h2>
+  <p>Inkwell collects no data. Read the <a href="privacy.html">privacy policy</a>.</p>
+  <footer>© 2026 Ilyas Daneshmand · <a href="./">Inkwell</a> · <a href="privacy.html">Privacy</a> · <a href="support.html">Support</a></footer>
+</div>
+</body>
+</html>

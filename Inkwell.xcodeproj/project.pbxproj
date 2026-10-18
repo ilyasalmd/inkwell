@@ -10,6 +10,7 @@
 		0317DA8ED8BFE428F6D817C1 /* ShapeSnap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3185EE886630C810AC661A94 /* ShapeSnap.swift */; };
 		04A92B8937D4917FEA4A0908 /* WhiteboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52297A9EE5B17A2434961517 /* WhiteboardView.swift */; };
 		140545C12911AB6A43894CE8 /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD99B5CCF5B7EA14CE8F0715 /* NotebookEditorView.swift */; };
+		1F8734D1E9FF0E0C1EE9C63F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 88B6D56292F2602F62F51409 /* PrivacyInfo.xcprivacy */; };
 		1FFDCA7835C94AB2C141D920 /* CoverArrangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */; };
 		21D831174F0F81A24F332174 /* LibraryBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22519091BE0A9813A46D434 /* LibraryBackup.swift */; };
 		27836306FFCAAC1B4662730C /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3D55E0940961AF9BC2BBFC /* EditorModel.swift */; };
@@ -66,6 +67,7 @@
 		6AAD2555BF24FEDF9DDCA6E2 /* CoverItems.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverItems.swift; sourceTree = "<group>"; };
 		6D427D7F7137A13FF8698F5E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		75D06F2DC501FFACF108B3B1 /* TrashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashView.swift; sourceTree = "<group>"; };
+		88B6D56292F2602F62F51409 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8BF0F87DFA05723D41225178 /* InkwellOpen.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = InkwellOpen.entitlements; sourceTree = "<group>"; };
 		8C402D55B865C0DECA46263A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		9A7E4FEDF832EE4F9F2CF1C5 /* CoverArrangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverArrangeView.swift; sourceTree = "<group>"; };
@@ -150,6 +152,7 @@
 				BFF35DC20345334E3C67BCD3 /* Inkwell.entitlements */,
 				C0BF2CBDC55A9BEB4BF6057D /* InkwellApp.swift */,
 				8BF0F87DFA05723D41225178 /* InkwellOpen.entitlements */,
+				88B6D56292F2602F62F51409 /* PrivacyInfo.xcprivacy */,
 				287022C59B9DD8763C71EF4C /* Editor */,
 				1D7CAE739633C54651BEF35B /* Model */,
 				5C923D165D8DE046A8675473 /* Services */,
@@ -243,6 +246,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				38A91FB7CE58DADEB01F44C1 /* Assets.xcassets in Resources */,
+				1F8734D1E9FF0E0C1EE9C63F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,7 +362,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -423,7 +427,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -510,7 +514,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
